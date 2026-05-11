@@ -15,9 +15,10 @@ const ingredientSchema = z.object({
 const dishSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional().nullable(),
-  instructions: z.string().max(20000).optional().nullable(),
+  notes: z.string().max(20000).optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
   sourceUrl: z.string().url().max(500).optional().nullable().or(z.literal("")),
+  imageUrl: z.string().max(5_000_000).optional().nullable(),
   ingredients: z.array(ingredientSchema),
 });
 
@@ -42,13 +43,15 @@ function parseDishForm(formData: FormData) {
       : null;
 
   const sourceUrlRaw = String(formData.get("sourceUrl") ?? "").trim();
+  const imageUrlRaw = String(formData.get("imageUrl") ?? "").trim();
 
   return dishSchema.parse({
     name: String(formData.get("name") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim() || null,
-    instructions: String(formData.get("instructions") ?? "").trim() || null,
+    notes: String(formData.get("notes") ?? "").trim() || null,
     servings,
     sourceUrl: sourceUrlRaw || null,
+    imageUrl: imageUrlRaw || null,
     ingredients,
   });
 }
@@ -59,9 +62,10 @@ export async function createDish(formData: FormData) {
     data: {
       name: data.name,
       description: data.description ?? null,
-      instructions: data.instructions ?? null,
+      notes: data.notes ?? null,
       servings: data.servings ?? null,
       sourceUrl: data.sourceUrl || null,
+      imageUrl: data.imageUrl || null,
       ingredients: {
         create: data.ingredients.map((ing, i) => ({
           name: ing.name,
@@ -86,9 +90,10 @@ export async function updateDish(id: string, formData: FormData) {
       data: {
         name: data.name,
         description: data.description ?? null,
-        instructions: data.instructions ?? null,
+        notes: data.notes ?? null,
         servings: data.servings ?? null,
         sourceUrl: data.sourceUrl || null,
+        imageUrl: data.imageUrl || null,
         ingredients: {
           create: data.ingredients.map((ing, i) => ({
             name: ing.name,

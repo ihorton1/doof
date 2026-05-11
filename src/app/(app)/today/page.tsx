@@ -28,7 +28,7 @@ export default async function TodayPage({
       mealSlot: "dinner",
       date: { gte: rangeStart, lt: rangeEnd },
     },
-    include: { dish: { select: { id: true, name: true } } },
+    include: { dish: { select: { id: true, name: true, imageUrl: true } } },
   });
 
   const byDate = new Map<string, (typeof entries)[number]>();
@@ -50,6 +50,7 @@ export default async function TodayPage({
             id: entry.id,
             dishId: entry.dishId,
             dishName: entry.dish?.name ?? null,
+            dishImageUrl: entry.dish?.imageUrl ?? null,
             freeformText: entry.freeformText,
             status: entry.status,
           }

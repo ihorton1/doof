@@ -54,9 +54,9 @@ export function ShopList({
   }));
   const checkedCount = items.filter((i) => i.checked).length;
 
-  function regenerate() {
+  function regenerate(mode: "aisle" | "dish") {
     startTransition(async () => {
-      await generateShoppingList(weekStart);
+      await generateShoppingList(weekStart, mode);
     });
   }
   function add() {
@@ -100,20 +100,32 @@ export function ShopList({
         </Link>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={regenerate}
-          disabled={isPending}
-          className="flex-1 h-11 rounded-lg border border-slate-300 dark:border-slate-700 inline-flex items-center justify-center gap-2 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-        >
-          <RefreshCw className={`size-4 ${isPending ? "animate-spin" : ""}`} />
-          Regenerate from plan
-        </button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1 text-xs">
+          <span className="text-slate-500">Regenerate:</span>
+          <button
+            type="button"
+            onClick={() => regenerate("aisle")}
+            disabled={isPending}
+            className="h-7 px-2 rounded border border-slate-300 dark:border-slate-700 inline-flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+          >
+            <RefreshCw className={`size-3 ${isPending ? "animate-spin" : ""}`} />
+            By aisle
+          </button>
+          <button
+            type="button"
+            onClick={() => regenerate("dish")}
+            disabled={isPending}
+            className="h-7 px-2 rounded border border-slate-300 dark:border-slate-700 inline-flex items-center gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+          >
+            <RefreshCw className={`size-3 ${isPending ? "animate-spin" : ""}`} />
+            By dish
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => setAdding((a) => !a)}
-          className="h-11 px-4 rounded-lg border border-slate-300 dark:border-slate-700 inline-flex items-center justify-center gap-1 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="h-9 px-3 rounded-lg border border-slate-300 dark:border-slate-700 inline-flex items-center justify-center gap-1 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           <Plus className="size-4" /> Add
         </button>
@@ -156,7 +168,8 @@ export function ShopList({
       {items.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-500 text-sm">
           Empty. Plan some meals and tap{" "}
-          <span className="font-medium">Regenerate</span>.
+          <span className="font-medium">By aisle</span> or{" "}
+          <span className="font-medium">By dish</span>.
         </div>
       ) : (
         <div className="space-y-3">

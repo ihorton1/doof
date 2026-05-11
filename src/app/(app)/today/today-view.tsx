@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useTransition } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Check, X, ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
-import { setEntryStatus } from "../plan/actions";
+import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const useIsoLayoutEffect =
@@ -19,6 +17,7 @@ type Day = {
     id: string;
     dishId: string | null;
     dishName: string | null;
+    dishImageUrl: string | null;
     freeformText: string | null;
     status: string;
   } | null;
@@ -207,41 +206,79 @@ function DayCard({
   emphasized?: boolean;
   inLink?: boolean;
 }) {
+  const imageUrl = day.entry?.dishImageUrl ?? null;
+  const hasImage = !!imageUrl;
   return (
     <div
       className={cn(
-        "h-full rounded-2xl border bg-white dark:bg-slate-900 p-5 flex flex-col",
+        "relative h-full rounded-2xl border overflow-hidden flex flex-col",
+        hasImage ? "bg-slate-900" : "bg-white dark:bg-slate-900",
         emphasized
           ? "border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-sm"
           : "border-slate-200 dark:border-slate-800",
       )}
     >
-      <div className="flex items-baseline justify-between mb-3">
-        <h2
-          className={cn(
-            "font-semibold",
-            day.isToday ? "text-emerald-600 dark:text-emerald-400" : "",
-          )}
-        >
-          {day.label}
-        </h2>
-        <span className="text-xs text-slate-400">{day.iso}</span>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-        {day.entry ? (
-          <PlannedMeal day={day} inLink={inLink} />
-        ) : (
-          <EmptyMeal isToday={day.isToday} inLink={inLink} />
+      {hasImage && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl!}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30" />
+        </>
+      )}
+      <div
+        className={cn(
+          "relative flex flex-col h-full p-5",
+          hasImage && "text-white",
         )}
-      </div>
+      >
+        <div className="flex items-baseline justify-between mb-3">
+          <h2
+            className={cn(
+              "font-semibold",
+              day.isToday && !hasImage
+                ? "text-emerald-600 dark:text-emerald-400"
+                : day.isToday && hasImage
+                  ? "text-emerald-300"
+                  : "",
+            )}
+          >
+            {day.label}
+          </h2>
+          <span
+            className={cn(
+              "text-xs",
+              hasImage ? "text-white/70" : "text-slate-400",
+            )}
+          >
+            {day.iso}
+          </span>
+        </div>
 
-      {day.isToday && day.entry && !inLink && <TodayActions entry={day.entry} />}
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+          {day.entry ? (
+            <PlannedMeal day={day} inLink={inLink} hasImage={hasImage} />
+          ) : (
+            <EmptyMeal day={day} inLink={inLink} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
-function PlannedMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
+function PlannedMeal({
+  day,
+  inLink,
+  hasImage,
+}: {
+  day: Day;
+  inLink?: boolean;
+  hasImage?: boolean;
+}) {
   const entry = day.entry!;
   const title = entry.dishName ?? entry.freeformText ?? "—";
   const titleNode =
@@ -253,109 +290,53 @@ function PlannedMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
       <span>{title}</span>
     );
   return (
-    <div className="space-y-2">
-      <UtensilsCrossed
-        className={cn(
-          "size-8 mx-auto",
-          entry.status === "cooked"
-            ? "text-emerald-500"
-            : entry.status === "skipped"
-              ? "text-slate-400"
-              : "text-slate-500",
-        )}
-      />
+    <div className="space-y-2 mt-auto">
+      {!hasImage && (
+        <UtensilsCrossed
+          className={cn(
+            "size-8 mx-auto",
+            entry.status === "skipped" ? "text-slate-400" : "text-slate-500",
+          )}
+        />
+      )}
       <div
         className={cn(
           "text-lg font-medium",
-          entry.status === "skipped" && "line-through text-slate-400",
+          entry.status === "skipped" && "line-through opacity-60",
         )}
       >
         {titleNode}
       </div>
-      <StatusBadge status={entry.status} />
     </div>
   );
 }
 
-function EmptyMeal({ isToday, inLink }: { isToday: boolean; inLink?: boolean }) {
+function EmptyMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
+  const weekStart = getWeekStartIso(day.iso);
   return (
     <div className="text-slate-400 text-sm space-y-2">
       <UtensilsCrossed className="size-8 mx-auto opacity-30" />
       <div>Nothing planned</div>
-      {isToday && !inLink && (
+      {!inLink && (
         <Link
-          href="/plan"
+          href={`/plan?week=${weekStart}`}
           className="text-emerald-600 hover:underline text-sm font-medium inline-block"
         >
-          Plan dinner →
+          {day.isToday ? "Plan dinner →" : "Add a dish →"}
         </Link>
       )}
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    planned: {
-      label: "Planned",
-      cls: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-    },
-    cooked: {
-      label: "Cooked",
-      cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
-    },
-    skipped: {
-      label: "Skipped",
-      cls: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400",
-    },
-  };
-  const m = map[status] ?? map.planned;
-  return (
-    <span className={cn("inline-block text-xs px-2 py-0.5 rounded-full", m.cls)}>
-      {m.label}
-    </span>
-  );
-}
-
-function TodayActions({ entry }: { entry: NonNullable<Day["entry"]> }) {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-  function set(next: "planned" | "cooked" | "skipped") {
-    startTransition(async () => {
-      await setEntryStatus({ entryId: entry.id, status: next });
-      router.refresh();
-    });
-  }
-  return (
-    <div className="flex gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
-      <button
-        type="button"
-        onClick={() => set(entry.status === "cooked" ? "planned" : "cooked")}
-        disabled={isPending}
-        className={cn(
-          "flex-1 h-11 rounded-lg font-medium text-sm inline-flex items-center justify-center gap-1 disabled:opacity-50",
-          entry.status === "cooked"
-            ? "bg-emerald-600 text-white hover:bg-emerald-700"
-            : "border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800",
-        )}
-      >
-        <Check className="size-4" />
-        {entry.status === "cooked" ? "Cooked" : "Mark cooked"}
-      </button>
-      <button
-        type="button"
-        onClick={() => set(entry.status === "skipped" ? "planned" : "skipped")}
-        disabled={isPending}
-        aria-label={entry.status === "skipped" ? "Unskip" : "Skip"}
-        className={cn(
-          "h-11 w-11 rounded-lg inline-flex items-center justify-center disabled:opacity-50",
-          entry.status === "skipped"
-            ? "bg-slate-500 text-white hover:bg-slate-600"
-            : "border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500",
-        )}
-      >
-        <X className="size-4" />
-      </button>
-    </div>
-  );
+function getWeekStartIso(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
 }

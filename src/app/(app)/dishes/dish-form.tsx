@@ -1,7 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Trash2, Plus } from "lucide-react";
+import { ImagePicker } from "./image-picker";
 
 type Ingredient = {
   name: string;
@@ -12,19 +14,23 @@ type Ingredient = {
 type Initial = {
   name?: string;
   description?: string | null;
-  instructions?: string | null;
+  notes?: string | null;
   servings?: number | null;
   sourceUrl?: string | null;
+  imageUrl?: string | null;
   ingredients?: { name: string; quantity: string | null; unit: string | null }[];
 };
 
 export function DishForm({
   action,
   initial,
+  suggestions,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: Initial;
+  suggestions?: { names: string[]; units: string[] };
 }) {
+  const router = useRouter();
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     initial?.ingredients?.length
       ? initial.ingredients.map((i) => ({
@@ -48,7 +54,24 @@ export function DishForm({
   }
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} className="space-y-5 relative">
+      <datalist id="ingredient-name-suggestions">
+        {suggestions?.names.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+      <datalist id="unit-suggestions">
+        {suggestions?.units.map((u) => (
+          <option key={u} value={u} />
+        ))}
+      </datalist>
+      <button
+        type="button"
+        onClick={() => router.back()}
+        className="absolute -top-10 right-0 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+      >
+        Cancel
+      </button>
       <Field label="Name" required>
         <input
           name="name"
@@ -66,6 +89,10 @@ export function DishForm({
           defaultValue={initial?.description ?? ""}
           className={inputCls}
         />
+      </Field>
+
+      <Field label="Image">
+        <ImagePicker initial={initial?.imageUrl ?? null} />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -109,21 +136,25 @@ export function DishForm({
                 value={ing.quantity}
                 onChange={(e) => updateRow(idx, "quantity", e.target.value)}
                 placeholder="Qty"
-                className={`${inputCls} w-20 flex-shrink-0`}
+                className={`${inputCls} !w-20 flex-shrink-0`}
               />
               <input
                 name="ingredient_unit"
                 value={ing.unit}
                 onChange={(e) => updateRow(idx, "unit", e.target.value)}
                 placeholder="Unit"
-                className={`${inputCls} w-20 flex-shrink-0`}
+                list={ing.unit ? "unit-suggestions" : undefined}
+                autoComplete="off"
+                className={`${inputCls} !w-20 flex-shrink-0`}
               />
               <input
                 name="ingredient_name"
                 value={ing.name}
                 onChange={(e) => updateRow(idx, "name", e.target.value)}
                 placeholder="Ingredient"
-                className={`${inputCls} flex-1`}
+                list={ing.name ? "ingredient-name-suggestions" : undefined}
+                autoComplete="off"
+                className={`${inputCls} flex-1 min-w-0`}
               />
               <button
                 type="button"
@@ -138,22 +169,24 @@ export function DishForm({
         </div>
       </div>
 
-      <Field label="Instructions">
+      <Field label="Notes">
         <textarea
-          name="instructions"
+          name="notes"
           rows={6}
           maxLength={20000}
-          defaultValue={initial?.instructions ?? ""}
+          defaultValue={initial?.notes ?? ""}
           className={`${inputCls} font-mono text-sm`}
         />
       </Field>
 
-      <button
-        type="submit"
-        className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
-      >
-        Save dish
-      </button>
+      <div className="flex gap-3">
+        <button
+          type="submit"
+          className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
+        >
+          Save dish
+        </button>
+      </div>
     </form>
   );
 }

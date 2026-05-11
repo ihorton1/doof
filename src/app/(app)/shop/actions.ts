@@ -23,7 +23,10 @@ async function getOrCreateList(weekStartIso: string) {
  *  - Manual items (source=manual) are preserved, including their checked state.
  *  - For auto items, we preserve `checked` if a same-name+unit auto item exists.
  */
-export async function generateShoppingList(weekStartIso: string) {
+export async function generateShoppingList(
+  weekStartIso: string,
+  mode: "aisle" | "dish" = "aisle",
+) {
   const list = await getOrCreateList(weekStartIso);
   const weekStart = fromISODate(weekStartIso);
   const weekEnd = new Date(weekStart);
@@ -38,57 +41,106 @@ export async function generateShoppingList(weekStartIso: string) {
     include: { dish: { include: { ingredients: true } } },
   });
 
-  // Aggregate by normalized (name|unit). Quantity stays as string and is summed
-  // when both are numeric, else concatenated with "+".
-  type Agg = {
-    name: string;
-    unit: string | null;
-    quantity: string | null;
-    dishIds: Set<string>;
-  };
-  const agg = new Map<string, Agg>();
-
-  for (const entry of entries) {
-    if (!entry.dish) continue;
-    for (const ing of entry.dish.ingredients) {
-      const name = ing.name.trim();
-      const unit = (ing.unit ?? "").trim() || null;
-      const key = `${name.toLowerCase()}|${unit ?? ""}`;
-      const existing = agg.get(key);
-      if (!existing) {
-        agg.set(key, {
-          name,
-          unit,
-          quantity: ing.quantity ?? null,
-          dishIds: new Set([entry.dish.id]),
-        });
-      } else {
-        existing.dishIds.add(entry.dish.id);
-        if (ing.quantity) {
-          if (existing.quantity == null) {
-            existing.quantity = ing.quantity;
-          } else {
-            const a = Number(existing.quantity);
-            const b = Number(ing.quantity);
-            if (Number.isFinite(a) && Number.isFinite(b)) {
-              existing.quantity = String(a + b);
-            } else {
-              existing.quantity = `${existing.quantity} + ${ing.quantity}`;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Preserve checked state of existing auto items by (name|unit) key.
+  // Preserve checked state of existing auto items by (name|unit|dishId) key.
   const existingAuto = await prisma.shoppingListItem.findMany({
     where: { shoppingListId: list.id, source: "auto" },
   });
   const checkedMap = new Map<string, boolean>();
   for (const item of existingAuto) {
-    const key = `${item.name.toLowerCase()}|${item.unit ?? ""}`;
+    const key = `${item.name.toLowerCase()}|${item.unit ?? ""}|${item.dishId ?? ""}`;
     if (item.checked) checkedMap.set(key, true);
+  }
+
+  type Row = {
+    name: string;
+    unit: string | null;
+    quantity: string | null;
+    category: string | null;
+    dishId: string | null;
+  };
+  const rows: Row[] = [];
+
+  if (mode === "dish") {
+    // One row per (dish, ingredient). Group label = dish name (stored in category).
+    for (const entry of entries) {
+      if (!entry.dish) continue;
+      for (const ing of entry.dish.ingredients) {
+        rows.push({
+          name: ing.name.trim(),
+          unit: (ing.unit ?? "").trim() || null,
+          quantity: ing.quantity ?? null,
+          category: entry.dish.name,
+          dishId: entry.dish.id,
+        });
+      }
+    }
+    // De-dup identical (dish, name, unit) so the same dish planned twice doesn't
+    // show duplicates; sum quantities when numeric.
+    const dedup = new Map<string, Row>();
+    for (const r of rows) {
+      const key = `${r.dishId}|${r.name.toLowerCase()}|${r.unit ?? ""}`;
+      const existing = dedup.get(key);
+      if (!existing) {
+        dedup.set(key, { ...r });
+      } else if (r.quantity) {
+        if (existing.quantity == null) {
+          existing.quantity = r.quantity;
+        } else {
+          const a = Number(existing.quantity);
+          const b = Number(r.quantity);
+          existing.quantity = Number.isFinite(a) && Number.isFinite(b)
+            ? String(a + b)
+            : `${existing.quantity} + ${r.quantity}`;
+        }
+      }
+    }
+    rows.length = 0;
+    rows.push(...dedup.values());
+  } else {
+    // Aisle mode: aggregate by (name|unit) across all dishes.
+    type Agg = Row & { dishIds: Set<string> };
+    const agg = new Map<string, Agg>();
+    for (const entry of entries) {
+      if (!entry.dish) continue;
+      for (const ing of entry.dish.ingredients) {
+        const name = ing.name.trim();
+        const unit = (ing.unit ?? "").trim() || null;
+        const key = `${name.toLowerCase()}|${unit ?? ""}`;
+        const existing = agg.get(key);
+        if (!existing) {
+          agg.set(key, {
+            name,
+            unit,
+            quantity: ing.quantity ?? null,
+            category: categorize(name),
+            dishId: null,
+            dishIds: new Set([entry.dish.id]),
+          });
+        } else {
+          existing.dishIds.add(entry.dish.id);
+          if (ing.quantity) {
+            if (existing.quantity == null) {
+              existing.quantity = ing.quantity;
+            } else {
+              const a = Number(existing.quantity);
+              const b = Number(ing.quantity);
+              existing.quantity = Number.isFinite(a) && Number.isFinite(b)
+                ? String(a + b)
+                : `${existing.quantity} + ${ing.quantity}`;
+            }
+          }
+        }
+      }
+    }
+    for (const a of agg.values()) {
+      rows.push({
+        name: a.name,
+        unit: a.unit,
+        quantity: a.quantity,
+        category: a.category,
+        dishId: a.dishIds.size === 1 ? Array.from(a.dishIds)[0] : null,
+      });
+    }
   }
 
   await prisma.$transaction([
@@ -96,16 +148,16 @@ export async function generateShoppingList(weekStartIso: string) {
       where: { shoppingListId: list.id, source: "auto" },
     }),
     prisma.shoppingListItem.createMany({
-      data: Array.from(agg.values()).map((a, i) => {
-        const key = `${a.name.toLowerCase()}|${a.unit ?? ""}`;
+      data: rows.map((r, i) => {
+        const key = `${r.name.toLowerCase()}|${r.unit ?? ""}|${r.dishId ?? ""}`;
         return {
           shoppingListId: list.id,
-          name: a.name,
-          quantity: a.quantity,
-          unit: a.unit,
-          category: categorize(a.name),
+          name: r.name,
+          quantity: r.quantity,
+          unit: r.unit,
+          category: r.category,
           source: "auto",
-          dishId: a.dishIds.size === 1 ? Array.from(a.dishIds)[0] : null,
+          dishId: r.dishId,
           checked: checkedMap.get(key) ?? false,
           checkedAt: checkedMap.get(key) ? new Date() : null,
           position: i,

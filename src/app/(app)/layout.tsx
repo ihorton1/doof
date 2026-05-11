@@ -17,7 +17,7 @@ export default function AppLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 py-4 pb-6 min-h-0">
+      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-4 py-4 pb-6">
         {children}
       </main>
       <BottomNav />

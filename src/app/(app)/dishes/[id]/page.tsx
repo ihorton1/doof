@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { deleteDish } from "../actions";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
+import { DeleteDishButton } from "./delete-dish-button";
 
 export const dynamic = "force-dynamic";
 
@@ -54,20 +55,18 @@ export default async function DishDetailPage({
           >
             <Pencil className="size-4" />
           </Link>
-          <form action={deleteAction}>
-            <button
-              type="submit"
-              className="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950"
-              aria-label="Delete dish"
-              onClick={(e) => {
-                if (!confirm(`Delete "${dish.name}"?`)) e.preventDefault();
-              }}
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </form>
+          <DeleteDishButton action={deleteAction} name={dish.name} />
         </div>
       </div>
+
+      {dish.imageUrl && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={dish.imageUrl}
+          alt={dish.name}
+          className="w-full max-h-80 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
+        />
+      )}
 
       {dish.ingredients.length > 0 && (
         <section>
@@ -87,11 +86,11 @@ export default async function DishDetailPage({
         </section>
       )}
 
-      {dish.instructions && (
+      {dish.notes && (
         <section>
-          <h2 className="font-semibold mb-2">Instructions</h2>
+          <h2 className="font-semibold mb-2">Notes</h2>
           <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 whitespace-pre-wrap text-sm leading-relaxed">
-            {dish.instructions}
+            {dish.notes}
           </div>
         </section>
       )}

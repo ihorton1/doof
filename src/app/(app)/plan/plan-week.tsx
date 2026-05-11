@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
-import { upsertEntry, setEntryStatus } from "./actions";
+import { upsertEntry } from "./actions";
 
 type EntryView = {
   id: string;
@@ -91,9 +91,6 @@ export function PlanWeek({
                     >
                       <EntryDisplay entry={entry} />
                     </button>
-                    {entry && (
-                      <StatusToggle entryId={entry.id} status={entry.status} />
-                    )}
                   </li>
                 );
               })}
@@ -133,51 +130,6 @@ function EntryDisplay({ entry }: { entry: EntryView | undefined }) {
     >
       {label}
     </span>
-  );
-}
-
-function StatusToggle({
-  entryId,
-  status,
-}: {
-  entryId: string;
-  status: string;
-}) {
-  const [isPending, startTransition] = useTransition();
-  function set(next: "planned" | "cooked" | "skipped") {
-    startTransition(async () => {
-      await setEntryStatus({ entryId, status: next });
-    });
-  }
-  return (
-    <div className="flex gap-1 flex-shrink-0">
-      <button
-        type="button"
-        onClick={() => set(status === "cooked" ? "planned" : "cooked")}
-        disabled={isPending}
-        aria-label="Mark cooked"
-        className={`size-8 flex items-center justify-center rounded ${
-          status === "cooked"
-            ? "bg-emerald-600 text-white"
-            : "text-slate-400 hover:text-emerald-600"
-        }`}
-      >
-        <Check className="size-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => set(status === "skipped" ? "planned" : "skipped")}
-        disabled={isPending}
-        aria-label="Mark skipped"
-        className={`size-8 flex items-center justify-center rounded ${
-          status === "skipped"
-            ? "bg-slate-500 text-white"
-            : "text-slate-400 hover:text-slate-600"
-        }`}
-      >
-        <X className="size-4" />
-      </button>
-    </div>
   );
 }
 
