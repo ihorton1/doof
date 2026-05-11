@@ -1,0 +1,102 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Dish {
+  id           String             @id @default(cuid())
+  name         String
+  description  String?
+  instructions String?
+  servings     Int?
+  sourceUrl    String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  ingredients  DishIngredient[]
+  planEntries  MealPlanEntry[]
+  shopItems    ShoppingListItem[]
+}
+
+model DishIngredient {
+  id        String  @id @default(cuid())
+  dishId    String
+  name      String
+  quantity  String?
+  unit      String?
+  notes     String?
+  position  Int     @default(0)
+
+  dish      Dish    @relation(fields: [dishId], references: [id], onDelete: Cascade)
+
+  @@index([dishId])
+}
+
+// Meal slot kept as a string ("breakfast" | "lunch" | "dinner" | "snack") for
+// flexibility — SQLite doesn't have native enums and we may add slots later.
+
+model MealPlan {
+  id            String          @id @default(cuid())
+  weekStartDate DateTime        @unique
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  entries       MealPlanEntry[]
+}
+
+model MealPlanEntry {
+  id            String   @id @default(cuid())
+  mealPlanId    String
+  date          DateTime
+  mealSlot      String
+  dishId        String?
+  freeformText  String?
+  status        String   @default("planned") // planned | cooked | skipped
+  cookedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  mealPlan      MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  dish          Dish?    @relation(fields: [dishId], references: [id], onDelete: SetNull)
+
+  @@index([mealPlanId])
+  @@index([date])
+}
+
+model ShoppingList {
+  id            String             @id @default(cuid())
+  weekStartDate DateTime           @unique
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  items         ShoppingListItem[]
+}
+
+model ShoppingListItem {
+  id              String       @id @default(cuid())
+  shoppingListId  String
+  name            String
+  quantity        String?
+  unit            String?
+  category        String?      // produce | protein | dairy | pantry | other
+  source          String       @default("auto") // auto | manual
+  dishId          String?
+  checked         Boolean      @default(false)
+  checkedAt       DateTime?
+  position        Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  shoppingList    ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  dish            Dish?        @relation(fields: [dishId], references: [id], onDelete: SetNull)
+
+  @@index([shoppingListId])
+}
