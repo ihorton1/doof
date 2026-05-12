@@ -13,10 +13,17 @@ export default async function DishDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const dish = await prisma.dish.findUnique({
-    where: { id },
-    include: { ingredients: { orderBy: { position: "asc" } } },
-  });
+  const [dish, history] = await Promise.all([
+    prisma.dish.findUnique({
+      where: { id },
+      include: { ingredients: { orderBy: { position: "asc" } } },
+    }),
+    prisma.mealPlanEntry.findMany({
+      where: { dishId: id, status: "cooked" },
+      orderBy: [{ cookedAt: "desc" }, { date: "desc" }],
+      select: { id: true, date: true, cookedAt: true, mealSlot: true },
+    }),
+  ]);
   if (!dish) notFound();
 
   const deleteAction = deleteDish.bind(null, dish.id);
@@ -55,7 +62,6 @@ export default async function DishDetailPage({
           >
             <Pencil className="size-4" />
           </Link>
-          <DeleteDishButton action={deleteAction} name={dish.name} />
         </div>
       </div>
 
@@ -94,6 +100,45 @@ export default async function DishDetailPage({
           </div>
         </section>
       )}
+
+      <section>
+        <h2 className="font-semibold mb-2">
+          Cooked {history.length > 0 && (
+            <span className="text-slate-500 font-normal">
+              · {history.length}{" "}
+              {history.length === 1 ? "time" : "times"}
+            </span>
+          )}
+        </h2>
+        {history.length === 0 ? (
+          <p className="text-sm text-slate-500">Not cooked yet.</p>
+        ) : (
+          <ul className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
+            {history.map((h) => {
+              const when = h.cookedAt ?? h.date;
+              return (
+                <li key={h.id} className="px-4 py-2 text-sm flex justify-between gap-3">
+                  <span>
+                    {when.toLocaleDateString(undefined, {
+                      weekday: "short",
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <span className="text-slate-500 capitalize">
+                    {h.mealSlot}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <div className="pt-8 flex justify-end">
+        <DeleteDishButton action={deleteAction} name={dish.name} />
+      </div>
     </div>
   );
 }
