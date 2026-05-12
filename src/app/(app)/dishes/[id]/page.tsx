@@ -19,8 +19,12 @@ export default async function DishDetailPage({
       include: { ingredients: { orderBy: { position: "asc" } } },
     }),
     prisma.mealPlanEntry.findMany({
-      where: { dishId: id, status: "cooked" },
-      orderBy: [{ cookedAt: "desc" }, { date: "desc" }],
+      where: {
+        dishId: id,
+        status: { not: "skipped" },
+        date: { lte: new Date() },
+      },
+      orderBy: [{ date: "desc" }, { cookedAt: "desc" }],
       select: { id: true, date: true, cookedAt: true, mealSlot: true },
     }),
   ]);
