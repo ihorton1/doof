@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Trash2, Plus } from "lucide-react";
 import { ImagePicker } from "./image-picker";
 
@@ -180,14 +181,22 @@ export function DishForm({
       </Field>
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
-        >
-          Save dish
-        </button>
+        <SaveButton />
       </div>
     </form>
+  );
+}
+
+function SaveButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full h-12 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed"
+    >
+      {pending ? "Saving…" : "Save dish"}
+    </button>
   );
 }
 
