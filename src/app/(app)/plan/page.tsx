@@ -26,7 +26,9 @@ export default async function PlanPage({
       where: { weekStartDate: weekStart },
       include: {
         entries: {
-          include: { dish: { select: { id: true, name: true } } },
+          include: {
+            dish: { select: { id: true, name: true, imageUrl: true } },
+          },
         },
       },
     }),
@@ -41,6 +43,7 @@ export default async function PlanPage({
     id: string;
     dishId: string | null;
     dishName: string | null;
+    dishImageUrl: string | null;
     freeformText: string | null;
     status: string;
   };
@@ -52,6 +55,7 @@ export default async function PlanPage({
         id: e.id,
         dishId: e.dishId,
         dishName: e.dish?.name ?? null,
+        dishImageUrl: e.dish?.imageUrl ?? null,
         freeformText: e.freeformText,
         status: e.status,
       };

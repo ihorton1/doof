@@ -29,9 +29,9 @@ function parseDishForm(formData: FormData) {
 
   const ingredients = names
     .map((name, i) => ({
-      name: name.trim(),
+      name: name.trim().toLowerCase(),
       quantity: (quantities[i] ?? "").trim() || null,
-      unit: (units[i] ?? "").trim() || null,
+      unit: (units[i] ?? "").trim().toLowerCase() || null,
       notes: null,
     }))
     .filter((ing) => ing.name.length > 0);
