@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 
 const MAX_DIM = 1200;
@@ -48,8 +48,6 @@ export function ImagePicker({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   async function handleFile(file: File) {
     setError(null);
@@ -96,7 +94,7 @@ export function ImagePicker({
   }
 
   return (
-    <div ref={containerRef}>
+    <div>
       <input type="hidden" name={name} value={imageUrl ?? ""} />
       {imageUrl ? (
         <div className="relative">
@@ -116,15 +114,14 @@ export function ImagePicker({
           </button>
         </div>
       ) : (
-        <div
+        <label
           onDragOver={(e) => {
             e.preventDefault();
             setDragOver(true);
           }}
           onDragLeave={() => setDragOver(false)}
           onDrop={onDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex flex-col items-center justify-center gap-2 h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+          className={`relative flex flex-col items-center justify-center gap-2 h-32 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
             dragOver
               ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30"
               : "border-slate-300 dark:border-slate-700 hover:border-emerald-400"
@@ -134,20 +131,24 @@ export function ImagePicker({
           <div className="text-sm text-slate-500 text-center px-3">
             {busy ? "Processing…" : "Paste, drop, or tap to add an image"}
           </div>
-        </div>
+          {/*
+            Native file input directly under user's tap — required for iOS
+            WebKit. Programmatically clicking a hidden input via ref drops the
+            change event when the OS hands off to the camera/photo picker.
+          */}
+          <input
+            type="file"
+            accept="image/*"
+            className="absolute inset-0 opacity-0 cursor-pointer"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFile(file);
+              e.target.value = "";
+            }}
+          />
+        </label>
       )}
       {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-          e.target.value = "";
-        }}
-      />
     </div>
   );
 }
