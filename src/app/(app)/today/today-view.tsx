@@ -26,34 +26,16 @@ type Day = {
 export function TodayView({
   days,
   focusIso,
-  realTodayIso,
   prevFocusIso,
   nextFocusIso,
 }: {
   days: Day[];
   focusIso: string;
-  realTodayIso: string;
   prevFocusIso: string;
   nextFocusIso: string;
 }) {
-  const isFocusToday = focusIso === realTodayIso;
-  const focusDay = days.find((d) => d.iso === focusIso);
-  const heading = isFocusToday ? "Tonight" : (focusDay?.label ?? "Dinner");
-
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{heading}</h1>
-        {!isFocusToday && (
-          <Link
-            href="/today"
-            className="text-sm text-emerald-600 hover:underline"
-          >
-            Jump to today
-          </Link>
-        )}
-      </div>
-
       <MobileCarousel days={days} focusIso={focusIso} />
 
       <DesktopRow

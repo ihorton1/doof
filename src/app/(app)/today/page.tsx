@@ -62,7 +62,6 @@ export default async function TodayPage({
     <TodayView
       days={days}
       focusIso={focusIso}
-      realTodayIso={realTodayIso}
       prevFocusIso={toISODate(addDays(focus, -1))}
       nextFocusIso={toISODate(addDays(focus, 1))}
     />
