@@ -136,7 +136,7 @@ export default async function DishDetailPage({
         )}
       </section>
 
-      <div className="pt-8 flex justify-end">
+      <div className="pt-8 flex justify-center">
         <DeleteDishButton action={deleteAction} name={dish.name} />
       </div>
     </div>
