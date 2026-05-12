@@ -183,6 +183,9 @@ export default async function PlanPage({
         grid={grid}
         dishes={dishes}
       />
+      <div className="mt-4">
+        <MiscList weekStart={weekStartIso} items={shoppingList?.items ?? []} />
+      </div>
       <div className="mt-3">
         <TemplatesBar
           weekStart={weekStartIso}
@@ -195,9 +198,6 @@ export default async function PlanPage({
             createdAt: t.createdAt.toISOString(),
           }))}
         />
-      </div>
-      <div className="mt-4">
-        <MiscList weekStart={weekStartIso} items={shoppingList?.items ?? []} />
       </div>
     </>
   );
