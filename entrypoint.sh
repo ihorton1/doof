@@ -6,7 +6,7 @@ mkdir -p /data
 
 # Run any pending migrations against the mounted SQLite file
 echo "Running Prisma migrations..."
-node /opt/prisma/node_modules/prisma/build/index.js migrate deploy
+PATH="/opt/prisma/node_modules/.bin:$PATH" prisma migrate deploy
 
 echo "Starting Next.js server..."
 exec node server.js
