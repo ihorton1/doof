@@ -9,6 +9,7 @@ import {
 } from "@/lib/utils";
 import { PlanWeek } from "./plan-week";
 import { PlanMonth, buildMonthCells } from "./plan-month";
+import { MiscList } from "./misc-list";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,7 @@ export default async function PlanPage({
   const weekStartIso = toISODate(weekStart);
   const weekEnd = addDays(weekStart, 7);
 
-  const [plan, dishes] = await Promise.all([
+  const [plan, dishes, shoppingList] = await Promise.all([
     prisma.mealPlan.findUnique({
       where: { weekStartDate: weekStart },
       include: {
@@ -114,6 +115,16 @@ export default async function PlanPage({
     prisma.dish.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.shoppingList.findUnique({
+      where: { weekStartDate: weekStart },
+      include: {
+        items: {
+          where: { source: "manual" },
+          orderBy: { position: "asc" },
+          select: { id: true, name: true, quantity: true, unit: true },
+        },
+      },
     }),
   ]);
 
@@ -150,17 +161,22 @@ export default async function PlanPage({
   const nextWeek = toISODate(addDays(weekStart, 7));
 
   return (
-    <PlanWeek
-      weekStart={weekStartIso}
-      weekEnd={toISODate(addDays(weekEnd, -1))}
-      prevWeek={prevWeek}
-      nextWeek={nextWeek}
-      monthParam={monthParam}
-      days={days.map((d) => ({ iso: d.iso, label: formatDayLabel(d.date) }))}
-      slots={MEAL_SLOTS as readonly MealSlot[]}
-      grid={grid}
-      dishes={dishes}
-    />
+    <>
+      <PlanWeek
+        weekStart={weekStartIso}
+        weekEnd={toISODate(addDays(weekEnd, -1))}
+        prevWeek={prevWeek}
+        nextWeek={nextWeek}
+        monthParam={monthParam}
+        days={days.map((d) => ({ iso: d.iso, label: formatDayLabel(d.date) }))}
+        slots={MEAL_SLOTS as readonly MealSlot[]}
+        grid={grid}
+        dishes={dishes}
+      />
+      <div className="mt-4">
+        <MiscList weekStart={weekStartIso} items={shoppingList?.items ?? []} />
+      </div>
+    </>
   );
 }
 
