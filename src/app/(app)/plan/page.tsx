@@ -10,6 +10,7 @@ import {
 import { PlanWeek } from "./plan-week";
 import { PlanMonth, buildMonthCells } from "./plan-month";
 import { MiscList } from "./misc-list";
+import { TemplatesBar } from "./templates-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -101,7 +102,7 @@ export default async function PlanPage({
   const weekStartIso = toISODate(weekStart);
   const weekEnd = addDays(weekStart, 7);
 
-  const [plan, dishes, shoppingList] = await Promise.all([
+  const [plan, dishes, shoppingList, templates] = await Promise.all([
     prisma.mealPlan.findUnique({
       where: { weekStartDate: weekStart },
       include: {
@@ -124,6 +125,15 @@ export default async function PlanPage({
           orderBy: { position: "asc" },
           select: { id: true, name: true, quantity: true, unit: true },
         },
+      },
+    }),
+    prisma.planTemplate.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        _count: { select: { entries: true, miscItems: true } },
       },
     }),
   ]);
@@ -173,6 +183,19 @@ export default async function PlanPage({
         grid={grid}
         dishes={dishes}
       />
+      <div className="mt-3">
+        <TemplatesBar
+          weekStart={weekStartIso}
+          hasEntries={(plan?.entries.length ?? 0) > 0}
+          templates={templates.map((t) => ({
+            id: t.id,
+            name: t.name,
+            entryCount: t._count.entries,
+            miscCount: t._count.miscItems,
+            createdAt: t.createdAt.toISOString(),
+          }))}
+        />
+      </div>
       <div className="mt-4">
         <MiscList weekStart={weekStartIso} items={shoppingList?.items ?? []} />
       </div>

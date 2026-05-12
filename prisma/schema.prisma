@@ -102,3 +102,39 @@ model ShoppingListItem {
 
   @@index([shoppingListId])
 }
+
+model PlanTemplate {
+  id        String                @id @default(cuid())
+  name      String
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  entries   PlanTemplateEntry[]
+  miscItems PlanTemplateMiscItem[]
+}
+
+model PlanTemplateEntry {
+  id           String       @id @default(cuid())
+  templateId   String
+  dayOffset    Int          // 0..6 from week start (Mon)
+  mealSlot     String
+  dishId       String?
+  freeformText String?
+
+  template     PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+model PlanTemplateMiscItem {
+  id         String       @id @default(cuid())
+  templateId String
+  name       String
+  quantity   String?
+  unit       String?
+  position   Int          @default(0)
+
+  template   PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
