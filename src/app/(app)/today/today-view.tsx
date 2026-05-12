@@ -37,11 +37,13 @@ export function TodayView({
   nextFocusIso: string;
 }) {
   const isFocusToday = focusIso === realTodayIso;
+  const focusDay = days.find((d) => d.iso === focusIso);
+  const heading = isFocusToday ? "Tonight" : (focusDay?.label ?? "Dinner");
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Tonight</h1>
+        <h1 className="text-2xl font-bold">{heading}</h1>
         {!isFocusToday && (
           <Link
             href="/today"
