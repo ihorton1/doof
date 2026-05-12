@@ -29,11 +29,14 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Prisma runtime: schema, generated client, migrations, and the prisma CLI
+# Prisma migrations + schema
 COPY --from=builder /app/prisma ./prisma
+# Generated Prisma client used at runtime by the app
 COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Install prisma CLI standalone so `prisma migrate deploy` works at startup
+# (the standalone build excludes dev deps; prisma + its transitive deps are needed)
+RUN npm install --omit=dev --no-package-lock --prefix /opt/prisma prisma@6.19.3
 
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
