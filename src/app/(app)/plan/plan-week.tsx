@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
 import { upsertEntry } from "./actions";
+import { ViewToggle } from "./view-toggle";
 
 type EntryView = {
   id: string;
@@ -22,6 +23,7 @@ export function PlanWeek({
   weekEnd,
   prevWeek,
   nextWeek,
+  monthParam,
   days,
   slots,
   grid,
@@ -31,6 +33,7 @@ export function PlanWeek({
   weekEnd: string;
   prevWeek: string;
   nextWeek: string;
+  monthParam: string;
   days: { iso: string; label: string }[];
   slots: readonly MealSlot[];
   grid: Record<string, EntryView | undefined>;
@@ -63,6 +66,10 @@ export function PlanWeek({
         >
           <ChevronRight className="size-5" />
         </Link>
+      </div>
+
+      <div className="flex justify-center">
+        <ViewToggle current="week" weekParam={weekStart} monthParam={monthParam} />
       </div>
 
       <div className="space-y-3">
