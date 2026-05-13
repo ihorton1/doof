@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { DishForm } from "../../dish-form";
 import { updateDish } from "../../actions";
 import { getIngredientSuggestions } from "@/lib/ingredient-suggestions";
+import { getTagSuggestions } from "@/lib/tag-suggestions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,16 +13,21 @@ export default async function EditDishPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [dish, suggestions] = await Promise.all([
+  const [dish, ingredient, tagSuggestions] = await Promise.all([
     prisma.dish.findUnique({
       where: { id },
-      include: { ingredients: { orderBy: { position: "asc" } } },
+      include: {
+        ingredients: { orderBy: { position: "asc" } },
+        tags: { include: { tag: true } },
+      },
     }),
     getIngredientSuggestions(),
+    getTagSuggestions(),
   ]);
   if (!dish) notFound();
 
   const action = updateDish.bind(null, dish.id);
+  const suggestions = { ...ingredient, tags: tagSuggestions };
 
   return (
     <div className="space-y-4">
@@ -41,6 +47,7 @@ export default async function EditDishPage({
             quantity: i.quantity,
             unit: i.unit,
           })),
+          tags: dish.tags.map((dt) => dt.tag.name),
         }}
       />
     </div>

@@ -27,17 +27,39 @@ function cookedLabel(diff: number) {
   return `Cooked ${diff} days ago`;
 }
 
-export default async function DishesPage() {
-  const dishes = await prisma.dish.findMany({
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      imageUrl: true,
-      _count: { select: { ingredients: true } },
-    },
-  });
+export default async function DishesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string }>;
+}) {
+  const { tag: activeTag } = await searchParams;
+
+  const [dishes, allTags] = await Promise.all([
+    prisma.dish.findMany({
+      where: activeTag
+        ? { tags: { some: { tag: { name: activeTag } } } }
+        : undefined,
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageUrl: true,
+        _count: { select: { ingredients: true } },
+        tags: {
+          include: { tag: true },
+          orderBy: { tag: { name: "asc" } },
+        },
+      },
+    }),
+    prisma.tag.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        name: true,
+        _count: { select: { dishes: true } },
+      },
+    }),
+  ]);
 
   const today = startOfDay(new Date());
   const dishIds = dishes.map((d) => d.id);
@@ -87,6 +109,36 @@ export default async function DishesPage() {
         </Link>
       </div>
 
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {activeTag && (
+            <Link
+              href="/dishes"
+              className="inline-flex items-center h-7 px-3 rounded-full bg-slate-200 dark:bg-slate-700 text-xs font-medium hover:bg-slate-300 dark:hover:bg-slate-600"
+            >
+              Clear filter
+            </Link>
+          )}
+          {allTags.map((t) => {
+            const isActive = t.name === activeTag;
+            return (
+              <Link
+                key={t.name}
+                href={isActive ? "/dishes" : `/dishes?tag=${encodeURIComponent(t.name)}`}
+                className={`inline-flex items-center h-7 px-3 rounded-full text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-emerald-600 text-white"
+                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 hover:bg-emerald-200 dark:hover:bg-emerald-800"
+                }`}
+              >
+                {t.name}
+                <span className="ml-1.5 opacity-70">{t._count.dishes}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
       {dishes.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-500">
           <p className="mb-4">No dishes yet.</p>
@@ -133,6 +185,18 @@ export default async function DishesPage() {
                     {r.description && (
                       <div className="text-sm text-slate-500 line-clamp-1">
                         {r.description}
+                      </div>
+                    )}
+                    {r.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {r.tags.map((dt) => (
+                          <span
+                            key={dt.tag.id}
+                            className="inline-flex items-center h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-[10px] font-medium"
+                          >
+                            {dt.tag.name}
+                          </span>
+                        ))}
                       </div>
                     )}
                     <div className="text-xs text-slate-400 mt-1">{status}</div>

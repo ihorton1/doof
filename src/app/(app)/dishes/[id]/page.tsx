@@ -16,7 +16,10 @@ export default async function DishDetailPage({
   const [dish, history] = await Promise.all([
     prisma.dish.findUnique({
       where: { id },
-      include: { ingredients: { orderBy: { position: "asc" } } },
+      include: {
+        ingredients: { orderBy: { position: "asc" } },
+        tags: { include: { tag: true }, orderBy: { tag: { name: "asc" } } },
+      },
     }),
     prisma.mealPlanEntry.findMany({
       where: {
@@ -56,6 +59,19 @@ export default async function DishDetailPage({
             >
               Source
             </a>
+          )}
+          {dish.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {dish.tags.map((dt) => (
+                <Link
+                  key={dt.tag.id}
+                  href={`/dishes?tag=${encodeURIComponent(dt.tag.name)}`}
+                  className="inline-flex items-center h-6 px-2 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-800"
+                >
+                  {dt.tag.name}
+                </Link>
+              ))}
+            </div>
           )}
         </div>
         <div className="flex flex-col gap-2 flex-shrink-0">

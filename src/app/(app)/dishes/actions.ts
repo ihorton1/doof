@@ -20,6 +20,7 @@ const dishSchema = z.object({
   sourceUrl: z.string().url().max(500).optional().nullable().or(z.literal("")),
   imageUrl: z.string().max(5_000_000).optional().nullable(),
   ingredients: z.array(ingredientSchema),
+  tags: z.array(z.string().min(1).max(40)).default([]),
 });
 
 function parseDishForm(formData: FormData) {
@@ -35,6 +36,14 @@ function parseDishForm(formData: FormData) {
       notes: null,
     }))
     .filter((ing) => ing.name.length > 0);
+
+  const rawTags = formData.getAll("tag").map(String);
+  const tagSet = new Set<string>();
+  for (const t of rawTags) {
+    const cleaned = t.trim().toLowerCase().slice(0, 40);
+    if (cleaned) tagSet.add(cleaned);
+  }
+  const tags = Array.from(tagSet);
 
   const servingsRaw = formData.get("servings");
   const servings =
@@ -53,11 +62,28 @@ function parseDishForm(formData: FormData) {
     sourceUrl: sourceUrlRaw || null,
     imageUrl: imageUrlRaw || null,
     ingredients,
+    tags,
   });
+}
+
+async function upsertTagIds(names: string[]): Promise<string[]> {
+  if (names.length === 0) return [];
+  const ids: string[] = [];
+  for (const name of names) {
+    const tag = await prisma.tag.upsert({
+      where: { name },
+      create: { name },
+      update: {},
+      select: { id: true },
+    });
+    ids.push(tag.id);
+  }
+  return ids;
 }
 
 export async function createDish(formData: FormData) {
   const data = parseDishForm(formData);
+  const tagIds = await upsertTagIds(data.tags);
   const dish = await prisma.dish.create({
     data: {
       name: data.name,
@@ -75,6 +101,9 @@ export async function createDish(formData: FormData) {
           position: i,
         })),
       },
+      tags: {
+        create: tagIds.map((tagId) => ({ tagId })),
+      },
     },
   });
   revalidatePath("/dishes");
@@ -83,8 +112,10 @@ export async function createDish(formData: FormData) {
 
 export async function updateDish(id: string, formData: FormData) {
   const data = parseDishForm(formData);
+  const tagIds = await upsertTagIds(data.tags);
   await prisma.$transaction([
     prisma.dishIngredient.deleteMany({ where: { dishId: id } }),
+    prisma.dishTag.deleteMany({ where: { dishId: id } }),
     prisma.dish.update({
       where: { id },
       data: {
@@ -102,6 +133,9 @@ export async function updateDish(id: string, formData: FormData) {
             notes: ing.notes ?? null,
             position: i,
           })),
+        },
+        tags: {
+          create: tagIds.map((tagId) => ({ tagId })),
         },
       },
     }),

@@ -26,6 +26,7 @@ model Dish {
   ingredients  DishIngredient[]
   planEntries  MealPlanEntry[]
   shopItems    ShoppingListItem[]
+  tags         DishTag[]
 }
 
 model DishIngredient {
@@ -137,4 +138,23 @@ model PlanTemplateMiscItem {
   template   PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 
   @@index([templateId])
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+
+  dishes    DishTag[]
+}
+
+model DishTag {
+  dishId String
+  tagId  String
+
+  dish   Dish @relation(fields: [dishId], references: [id], onDelete: Cascade)
+  tag    Tag  @relation(fields: [tagId],  references: [id], onDelete: Cascade)
+
+  @@id([dishId, tagId])
+  @@index([tagId])
 }

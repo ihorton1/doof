@@ -12,6 +12,7 @@ type EntryView = {
   dishId: string | null;
   dishName: string | null;
   dishImageUrl: string | null;
+  dishTags: string[];
   freeformText: string | null;
   status: string;
 };
@@ -138,16 +139,26 @@ function EntryDisplay({ entry }: { entry: EntryView | undefined }) {
   }
   const label = entry.dishName ?? entry.freeformText ?? "—";
   return (
-    <span
-      className={
-        entry.status === "cooked"
-          ? "text-emerald-700 dark:text-emerald-400"
-          : entry.status === "skipped"
-            ? "line-through text-slate-400"
-            : ""
-      }
-    >
-      {label}
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span
+        className={
+          entry.status === "cooked"
+            ? "text-emerald-700 dark:text-emerald-400"
+            : entry.status === "skipped"
+              ? "line-through text-slate-400"
+              : ""
+        }
+      >
+        {label}
+      </span>
+      {entry.dishTags.map((t) => (
+        <span
+          key={t}
+          className="inline-flex items-center h-4 px-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-[10px] font-medium"
+        >
+          {t}
+        </span>
+      ))}
     </span>
   );
 }

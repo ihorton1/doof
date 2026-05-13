@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Plus } from "lucide-react";
 import { ImagePicker } from "./image-picker";
+import { TagPicker } from "./tag-picker";
 
 type Ingredient = {
   name: string;
@@ -20,6 +21,7 @@ type Initial = {
   sourceUrl?: string | null;
   imageUrl?: string | null;
   ingredients?: { name: string; quantity: string | null; unit: string | null }[];
+  tags?: string[];
 };
 
 export function DishForm({
@@ -29,7 +31,7 @@ export function DishForm({
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: Initial;
-  suggestions?: { names: string[]; units: string[] };
+  suggestions?: { names: string[]; units: string[]; tags: string[] };
 }) {
   const router = useRouter();
   const [ingredients, setIngredients] = useState<Ingredient[]>(
@@ -117,6 +119,10 @@ export function DishForm({
           />
         </Field>
       </div>
+
+      <Field label="Tags">
+        <TagPicker initial={initial?.tags ?? []} suggestions={suggestions?.tags ?? []} />
+      </Field>
 
       <div>
         <div className="flex items-center justify-between mb-2">

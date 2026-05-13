@@ -108,7 +108,17 @@ export default async function PlanPage({
       include: {
         entries: {
           include: {
-            dish: { select: { id: true, name: true, imageUrl: true } },
+            dish: {
+              select: {
+                id: true,
+                name: true,
+                imageUrl: true,
+                tags: {
+                  include: { tag: true },
+                  orderBy: { tag: { name: "asc" } },
+                },
+              },
+            },
           },
         },
       },
@@ -144,6 +154,7 @@ export default async function PlanPage({
     dishId: string | null;
     dishName: string | null;
     dishImageUrl: string | null;
+    dishTags: string[];
     freeformText: string | null;
     status: string;
   };
@@ -156,6 +167,7 @@ export default async function PlanPage({
         dishId: e.dishId,
         dishName: e.dish?.name ?? null,
         dishImageUrl: e.dish?.imageUrl ?? null,
+        dishTags: e.dish?.tags.map((dt) => dt.tag.name) ?? [],
         freeformText: e.freeformText,
         status: e.status,
       };
