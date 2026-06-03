@@ -125,16 +125,7 @@ export function DishForm({
       </Field>
 
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Ingredients</label>
-          <button
-            type="button"
-            onClick={addRow}
-            className="text-xs text-emerald-600 hover:underline inline-flex items-center gap-1"
-          >
-            <Plus className="size-3" /> Add
-          </button>
-        </div>
+        <label className="text-sm font-medium block mb-2">Ingredients</label>
         <div className="space-y-2">
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex gap-2">
@@ -174,6 +165,13 @@ export function DishForm({
             </div>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={addRow}
+          className="mt-2 h-10 w-[calc(100%-3.5rem)] rounded-lg border border-dashed border-slate-300 dark:border-slate-700 text-sm text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 flex items-center justify-center gap-1"
+        >
+          <Plus className="size-4" /> Add ingredient
+        </button>
       </div>
 
       <Field label="Notes">
