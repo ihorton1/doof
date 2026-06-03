@@ -212,6 +212,20 @@ export async function toggleItem(input: z.infer<typeof toggleSchema>) {
   revalidatePath("/shop");
 }
 
+const toggleManySchema = z.object({
+  itemIds: z.array(z.string()).min(1),
+  checked: z.boolean(),
+});
+
+export async function toggleItems(input: z.infer<typeof toggleManySchema>) {
+  const { itemIds, checked } = toggleManySchema.parse(input);
+  await prisma.shoppingListItem.updateMany({
+    where: { id: { in: itemIds } },
+    data: { checked, checkedAt: checked ? new Date() : null },
+  });
+  revalidatePath("/shop");
+}
+
 export async function deleteItem(itemId: string) {
   await prisma.shoppingListItem.delete({ where: { id: itemId } });
   revalidatePath("/shop");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -13,6 +13,7 @@ import {
   generateShoppingList,
   addManualItem,
   toggleItem,
+  toggleItems,
   deleteItem,
   clearChecked,
 } from "./actions";
@@ -179,9 +180,7 @@ export function ShopList({
                 key={cat}
                 className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden"
               >
-                <h2 className="px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-500 font-semibold">
-                  {cat}
-                </h2>
+                <SectionHeader cat={cat} items={catItems} />
                 <ul className="divide-y divide-slate-200 dark:divide-slate-800">
                   {catItems.map((item) => (
                     <ItemRow key={item.id} item={item} />
@@ -208,6 +207,40 @@ export function ShopList({
         </button>
       )}
     </div>
+  );
+}
+
+function SectionHeader({ cat, items }: { cat: string; items: Item[] }) {
+  const ref = useRef<HTMLInputElement | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const checkedCount = items.filter((i) => i.checked).length;
+  const allChecked = checkedCount === items.length;
+  const someChecked = checkedCount > 0 && !allChecked;
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = someChecked;
+  }, [someChecked]);
+
+  function toggleAll() {
+    const next = !allChecked;
+    startTransition(async () => {
+      await toggleItems({ itemIds: items.map((i) => i.id), checked: next });
+    });
+  }
+
+  return (
+    <h2 className="flex items-center gap-3 px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-500 font-semibold">
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={allChecked}
+        disabled={isPending}
+        onChange={toggleAll}
+        aria-label={`Toggle all ${cat}`}
+        className="size-4 accent-emerald-600 flex-shrink-0 normal-case"
+      />
+      <span>{cat}</span>
+    </h2>
   );
 }
 
