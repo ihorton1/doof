@@ -90,20 +90,16 @@ export function PlanWeek({
                     key={slot}
                     className="flex items-center gap-2 px-3 py-2 text-sm"
                   >
-                    <div className="w-12 flex-shrink-0 flex items-center">
-                      {entry?.dishImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
+                    {entry?.dishImageUrl && (
+                      <div className="w-12 flex-shrink-0 flex items-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={entry.dishImageUrl}
                           alt=""
                           className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
                         />
-                      ) : (
-                        <span className="text-xs uppercase tracking-wide text-slate-500">
-                          {slot}
-                        </span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => setEditing({ date: day.iso, slot })}
