@@ -2,9 +2,10 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider      = "prisma-client"
-  output        = "../src/generated/prisma"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+  runtime    = "nodejs"
 }
 
 datasource db {
@@ -69,9 +70,53 @@ model MealPlanEntry {
 
   mealPlan      MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
   dish          Dish?    @relation(fields: [dishId], references: [id], onDelete: SetNull)
+  produceLinks  ProduceBoxItemLink[]
 
   @@index([mealPlanId])
   @@index([date])
+}
+
+model ProduceBox {
+  id            String           @id @default(cuid())
+  weekStartDate DateTime         @unique
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  items         ProduceBoxItem[]
+}
+
+model ProduceBoxItem {
+  id            String               @id @default(cuid())
+  produceBoxId  String
+  name          String
+  quantity      String?
+  unit          String?
+  notes         String?
+  position      Int                  @default(0)
+  carriedFromId String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  produceBox    ProduceBox           @relation(fields: [produceBoxId], references: [id], onDelete: Cascade)
+  carriedFrom   ProduceBoxItem?      @relation("ProduceBoxItemCarryover", fields: [carriedFromId], references: [id], onDelete: SetNull)
+  carriedTo     ProduceBoxItem[]     @relation("ProduceBoxItemCarryover")
+  links         ProduceBoxItemLink[]
+
+  @@index([produceBoxId])
+  @@index([carriedFromId])
+}
+
+model ProduceBoxItemLink {
+  id               String         @id @default(cuid())
+  produceBoxItemId String
+  mealPlanEntryId  String
+  createdAt        DateTime       @default(now())
+
+  produceBoxItem   ProduceBoxItem @relation(fields: [produceBoxItemId], references: [id], onDelete: Cascade)
+  mealPlanEntry    MealPlanEntry  @relation(fields: [mealPlanEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([produceBoxItemId, mealPlanEntryId])
+  @@index([mealPlanEntryId])
 }
 
 model ShoppingList {

@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Pencil, Link2, CheckCircle2, Circle } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
 import { upsertEntry } from "./actions";
+import { linkBoxItem, unlinkBoxItem } from "./box-actions";
 import { ViewToggle } from "./view-toggle";
 
 type EntryView = {
@@ -19,6 +20,17 @@ type EntryView = {
 
 type Dish = { id: string; name: string };
 
+export type WeekBoxItem = {
+  id: string;
+  name: string;
+  quantity: string | null;
+  unit: string | null;
+  // entryIds this box item is currently linked to (within this week)
+  linkedEntryIds: string[];
+  // total link count (including links to entries outside this week, in case)
+  totalLinks: number;
+};
+
 export function PlanWeek({
   weekStart,
   weekEnd,
@@ -29,6 +41,7 @@ export function PlanWeek({
   slots,
   grid,
   dishes,
+  boxItems,
 }: {
   weekStart: string;
   weekEnd: string;
@@ -39,10 +52,23 @@ export function PlanWeek({
   slots: readonly MealSlot[];
   grid: Record<string, EntryView | undefined>;
   dishes: Dish[];
+  boxItems: WeekBoxItem[];
 }) {
   const [editing, setEditing] = useState<{ date: string; slot: MealSlot } | null>(
     null,
   );
+  const [linkingEntryId, setLinkingEntryId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function toggleLink(itemId: string, entryId: string, linkedNow: boolean) {
+    startTransition(async () => {
+      if (linkedNow) {
+        await unlinkBoxItem({ itemId, mealPlanEntryId: entryId });
+      } else {
+        await linkBoxItem({ itemId, mealPlanEntryId: entryId });
+      }
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -85,28 +111,77 @@ export function PlanWeek({
             <ul className="divide-y divide-slate-200 dark:divide-slate-800">
               {slots.map((slot) => {
                 const entry = grid[`${day.iso}|${slot}`];
+                const linkingHere = entry && linkingEntryId === entry.id;
                 return (
-                  <li
-                    key={slot}
-                    className="flex items-center gap-2 px-3 py-2 text-sm"
-                  >
-                    {entry?.dishImageUrl && (
-                      <div className="w-12 flex-shrink-0 flex items-center">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={entry.dishImageUrl}
-                          alt=""
-                          className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
-                        />
+                  <li key={slot} className="px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      {entry?.dishImageUrl && (
+                        <div className="w-12 flex-shrink-0 flex items-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={entry.dishImageUrl}
+                            alt=""
+                            className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                      )}
+
+                      <EntryBody
+                        entry={entry}
+                        onOpenEmptyEdit={() =>
+                          setEditing({ date: day.iso, slot })
+                        }
+                      />
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditing({ date: day.iso, slot })}
+                          className="size-8 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          aria-label={`Edit ${day.label} ${slot}`}
+                          title="Edit"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            entry &&
+                            setLinkingEntryId(
+                              linkingHere ? null : entry.id,
+                            )
+                          }
+                          disabled={!entry || boxItems.length === 0}
+                          className="size-8 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30"
+                          aria-label={
+                            entry
+                              ? `Link produce to ${day.label}`
+                              : "Plan a dish first to link produce"
+                          }
+                          title={
+                            boxItems.length === 0
+                              ? "Add produce box items first"
+                              : entry
+                                ? "Link produce box items"
+                                : "Plan a dish first"
+                          }
+                        >
+                          <Link2 className="size-4" />
+                        </button>
                       </div>
+                    </div>
+
+                    {linkingHere && entry && (
+                      <BoxLinkPicker
+                        entryId={entry.id}
+                        boxItems={boxItems}
+                        disabled={isPending}
+                        onToggle={(itemId, linkedNow) =>
+                          toggleLink(itemId, entry.id, linkedNow)
+                        }
+                        onClose={() => setLinkingEntryId(null)}
+                      />
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setEditing({ date: day.iso, slot })}
-                      className="flex-1 text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    >
-                      <EntryDisplay entry={entry} />
-                    </button>
                   </li>
                 );
               })}
@@ -129,24 +204,36 @@ export function PlanWeek({
   );
 }
 
-function EntryDisplay({ entry }: { entry: EntryView | undefined }) {
+function EntryBody({
+  entry,
+  onOpenEmptyEdit,
+}: {
+  entry: EntryView | undefined;
+  onOpenEmptyEdit: () => void;
+}) {
   if (!entry) {
-    return <span className="text-slate-400">— empty —</span>;
-  }
-  const label = entry.dishName ?? entry.freeformText ?? "—";
-  return (
-    <span className="inline-flex flex-wrap items-center gap-1.5">
-      <span
-        className={
-          entry.status === "cooked"
-            ? "text-emerald-700 dark:text-emerald-400"
-            : entry.status === "skipped"
-              ? "line-through text-slate-400"
-              : ""
-        }
+    return (
+      <button
+        type="button"
+        onClick={onOpenEmptyEdit}
+        className="flex-1 text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
       >
-        {label}
-      </span>
+        — empty —
+      </button>
+    );
+  }
+
+  const label = entry.dishName ?? entry.freeformText ?? "—";
+  const className =
+    entry.status === "cooked"
+      ? "text-emerald-700 dark:text-emerald-400"
+      : entry.status === "skipped"
+        ? "line-through text-slate-400"
+        : "";
+
+  const content = (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className={className}>{label}</span>
       {entry.dishTags.map((t) => (
         <span
           key={t}
@@ -156,6 +243,98 @@ function EntryDisplay({ entry }: { entry: EntryView | undefined }) {
         </span>
       ))}
     </span>
+  );
+
+  if (entry.dishId) {
+    return (
+      <Link
+        href={`/dishes/${entry.dishId}`}
+        className="flex-1 min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  // Freeform-only entry: clicking opens the edit modal (no dish to navigate to).
+  return (
+    <button
+      type="button"
+      onClick={onOpenEmptyEdit}
+      className="flex-1 text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center"
+    >
+      {content}
+    </button>
+  );
+}
+
+function BoxLinkPicker({
+  entryId,
+  boxItems,
+  disabled,
+  onToggle,
+  onClose,
+}: {
+  entryId: string;
+  boxItems: WeekBoxItem[];
+  disabled: boolean;
+  onToggle: (itemId: string, linkedNow: boolean) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mt-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-1">
+      <ul className="max-h-56 overflow-y-auto">
+        {boxItems.map((item) => {
+          const linkedHere = item.linkedEntryIds.includes(entryId);
+          const linkedElsewhere = !linkedHere && item.totalLinks > 0;
+          return (
+            <li key={item.id}>
+              <button
+                type="button"
+                onClick={() => onToggle(item.id, linkedHere)}
+                disabled={disabled}
+                className="w-full text-left px-2 py-1.5 rounded hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 text-sm flex items-center gap-2"
+              >
+                <span
+                  className={
+                    linkedHere
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-slate-300 dark:text-slate-600"
+                  }
+                  aria-hidden
+                >
+                  {linkedHere ? (
+                    <CheckCircle2 className="size-4" />
+                  ) : (
+                    <Circle className="size-4" />
+                  )}
+                </span>
+                <span className="flex-1 truncate">{item.name}</span>
+                {(item.quantity || item.unit) && (
+                  <span className="text-xs text-slate-500">
+                    {[item.quantity, item.unit].filter(Boolean).join(" ")}
+                  </span>
+                )}
+                {linkedElsewhere && (
+                  <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                    used
+                  </span>
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="flex justify-end px-1 py-1">
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-2 py-1"
+        >
+          Close
+        </button>
+      </div>
+    </div>
   );
 }
 
