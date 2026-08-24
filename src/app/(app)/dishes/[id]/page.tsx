@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { deleteDish } from "../actions";
 import { Pencil } from "lucide-react";
 import { DeleteDishButton } from "./delete-dish-button";
@@ -13,10 +14,17 @@ export default async function DishDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [dish, history] = await Promise.all([
+  const [dish, history, dishIdsWithImages] = await Promise.all([
     prisma.dish.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        notes: true,
+        servings: true,
+        sourceUrl: true,
+        updatedAt: true,
         ingredients: { orderBy: { position: "asc" } },
         tags: { include: { tag: true }, orderBy: { tag: { name: "asc" } } },
       },
@@ -30,6 +38,7 @@ export default async function DishDetailPage({
       orderBy: [{ date: "desc" }, { cookedAt: "desc" }],
       select: { id: true, date: true, cookedAt: true, mealSlot: true },
     }),
+    getDishIdsWithImages(),
   ]);
   if (!dish) notFound();
 
@@ -85,10 +94,10 @@ export default async function DishDetailPage({
         </div>
       </div>
 
-      {dish.imageUrl && (
+      {dishIdsWithImages.has(dish.id) && (
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
-          src={dish.imageUrl}
+          src={dishImagePath(dish.id, dish.updatedAt)}
           alt={dish.name}
           className="w-full max-h-80 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
         />

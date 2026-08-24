@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import {
   getWeekStart,
   addDays,
@@ -43,15 +44,18 @@ export default async function PlanPage({
       gridStart.getDate() + 42,
     );
 
-    const entries = await prisma.mealPlanEntry.findMany({
-      where: { date: { gte: gridStart, lt: gridEnd } },
-      select: {
-        date: true,
-        freeformText: true,
-        dish: { select: { name: true, imageUrl: true } },
-      },
-      orderBy: { date: "asc" },
-    });
+    const [entries, dishIdsWithImages] = await Promise.all([
+      prisma.mealPlanEntry.findMany({
+        where: { date: { gte: gridStart, lt: gridEnd } },
+        select: {
+          date: true,
+          freeformText: true,
+          dish: { select: { id: true, name: true, updatedAt: true } },
+        },
+        orderBy: { date: "asc" },
+      }),
+      getDishIdsWithImages(),
+    ]);
 
     const entriesByIso = new Map<
       string,
@@ -61,7 +65,10 @@ export default async function PlanPage({
       // Single slot (dinner) — last write wins, but there should only be one per date
       entriesByIso.set(toISODate(e.date), {
         dishName: e.dish?.name ?? null,
-        dishImageUrl: e.dish?.imageUrl ?? null,
+        dishImageUrl:
+          e.dish && dishIdsWithImages.has(e.dish.id)
+            ? dishImagePath(e.dish.id, e.dish.updatedAt)
+            : null,
         freeformText: e.freeformText,
       });
     }
@@ -103,7 +110,8 @@ export default async function PlanPage({
   const weekStartIso = toISODate(weekStart);
   const weekEnd = addDays(weekStart, 7);
 
-  const [plan, dishes, shoppingList, templates, produceBox] = await Promise.all([
+  const [plan, dishes, shoppingList, templates, produceBox, dishIdsWithImages] =
+    await Promise.all([
     prisma.mealPlan.findUnique({
       where: { weekStartDate: weekStart },
       include: {
@@ -113,7 +121,7 @@ export default async function PlanPage({
               select: {
                 id: true,
                 name: true,
-                imageUrl: true,
+                updatedAt: true,
                 tags: {
                   include: { tag: true },
                   orderBy: { tag: { name: "asc" } },
@@ -169,6 +177,7 @@ export default async function PlanPage({
         },
       },
     }),
+    getDishIdsWithImages(),
   ]);
 
   // Build a 7-day x slots grid keyed by `${dateIso}|${slot}`
@@ -189,7 +198,10 @@ export default async function PlanPage({
         id: e.id,
         dishId: e.dishId,
         dishName: e.dish?.name ?? null,
-        dishImageUrl: e.dish?.imageUrl ?? null,
+        dishImageUrl:
+          e.dish && dishIdsWithImages.has(e.dish.id)
+            ? dishImagePath(e.dish.id, e.dish.updatedAt)
+            : null,
         dishTags: e.dish?.tags.map((dt) => dt.tag.name) ?? [],
         freeformText: e.freeformText,
         status: e.status,
