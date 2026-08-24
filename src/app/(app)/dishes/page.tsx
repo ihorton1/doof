@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { Plus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export default async function DishesPage({
 }) {
   const { tag: activeTag } = await searchParams;
 
-  const [dishes, allTags] = await Promise.all([
+  const [dishes, allTags, dishIdsWithImages] = await Promise.all([
     prisma.dish.findMany({
       where: activeTag
         ? { tags: { some: { tag: { name: activeTag } } } }
@@ -44,7 +45,7 @@ export default async function DishesPage({
         id: true,
         name: true,
         description: true,
-        imageUrl: true,
+        updatedAt: true,
         _count: { select: { ingredients: true } },
         tags: {
           include: { tag: true },
@@ -59,6 +60,7 @@ export default async function DishesPage({
         _count: { select: { dishes: true } },
       },
     }),
+    getDishIdsWithImages(),
   ]);
 
   const today = startOfDay(new Date());
@@ -170,10 +172,10 @@ export default async function DishesPage({
                   href={`/dishes/${r.id}`}
                   className="flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                 >
-                  {r.imageUrl ? (
+                  {dishIdsWithImages.has(r.id) ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={r.imageUrl}
+                      src={dishImagePath(r.id, r.updatedAt)}
                       alt=""
                       className="size-14 rounded-md object-cover flex-shrink-0 border border-slate-200 dark:border-slate-800"
                     />

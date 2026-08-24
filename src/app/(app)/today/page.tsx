@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { addDays, toISODate, fromISODate } from "@/lib/utils";
 import { TodayView } from "./today-view";
 
@@ -23,13 +24,18 @@ export default async function TodayPage({
   const rangeStart = addDays(focus, -half);
   const rangeEnd = addDays(focus, half + 1);
 
-  const entries = await prisma.mealPlanEntry.findMany({
-    where: {
-      mealSlot: "dinner",
-      date: { gte: rangeStart, lt: rangeEnd },
-    },
-    include: { dish: { select: { id: true, name: true, imageUrl: true } } },
-  });
+  const [entries, dishIdsWithImages] = await Promise.all([
+    prisma.mealPlanEntry.findMany({
+      where: {
+        mealSlot: "dinner",
+        date: { gte: rangeStart, lt: rangeEnd },
+      },
+      include: {
+        dish: { select: { id: true, name: true, updatedAt: true } },
+      },
+    }),
+    getDishIdsWithImages(),
+  ]);
 
   const byDate = new Map<string, (typeof entries)[number]>();
   for (const e of entries) {
@@ -50,7 +56,10 @@ export default async function TodayPage({
             id: entry.id,
             dishId: entry.dishId,
             dishName: entry.dish?.name ?? null,
-            dishImageUrl: entry.dish?.imageUrl ?? null,
+            dishImageUrl:
+              entry.dish && dishIdsWithImages.has(entry.dish.id)
+                ? dishImagePath(entry.dish.id, entry.dish.updatedAt)
+                : null,
             freeformText: entry.freeformText,
             status: entry.status,
           }
