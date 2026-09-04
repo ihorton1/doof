@@ -9,9 +9,11 @@ type Cell = {
   inMonth: boolean;
   isToday: boolean;
   weekStartIso: string;
-  dishName: string | null;
-  dishImageUrl: string | null;
-  freeformText: string | null;
+  entries: {
+    dishName: string | null;
+    dishImageUrl: string | null;
+    freeformText: string | null;
+  }[];
 };
 
 export function PlanMonth({
@@ -66,7 +68,13 @@ export function PlanMonth({
 
       <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800">
         {weeks.flat().map((cell) => {
-          const label = cell.dishName ?? cell.freeformText;
+          const images = cell.entries.flatMap((entry) =>
+            entry.dishImageUrl ? [entry.dishImageUrl] : [],
+          );
+          const labels = cell.entries.flatMap((entry) => {
+            const label = entry.dishName ?? entry.freeformText;
+            return label ? [label] : [];
+          });
           return (
             <Link
               key={cell.iso}
@@ -84,18 +92,27 @@ export function PlanMonth({
               >
                 {cell.dayNum}
               </div>
-              {cell.dishImageUrl ? (
-                <div className="mt-1 flex-1 flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cell.dishImageUrl}
-                    alt={cell.dishName ?? ""}
-                    className="w-full h-full max-h-12 sm:max-h-16 object-cover rounded"
-                  />
+              {images.length > 0 ? (
+                <div className="mt-1 flex-1 flex items-center justify-center -space-x-3">
+                  {images.slice(0, 3).map((src, index) => (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      key={src}
+                      src={src}
+                      alt=""
+                      className="size-10 sm:size-12 object-cover rounded border-2 border-white dark:border-slate-900"
+                      style={{ zIndex: images.length - index }}
+                    />
+                  ))}
+                  {images.length > 3 && (
+                    <span className="relative z-10 -ml-2 text-[10px] font-medium">
+                      +{images.length - 3}
+                    </span>
+                  )}
                 </div>
-              ) : label ? (
+              ) : labels.length > 0 ? (
                 <div className="mt-1 text-[10px] sm:text-xs leading-tight line-clamp-3 text-slate-700 dark:text-slate-300">
-                  {label}
+                  {labels.join(", ")}
                 </div>
               ) : null}
             </Link>
@@ -111,7 +128,11 @@ export function buildMonthCells(opts: {
   month0: number; // 0-11
   entriesByIso: Map<
     string,
-    { dishName: string | null; dishImageUrl: string | null; freeformText: string | null }
+    Array<{
+      dishName: string | null;
+      dishImageUrl: string | null;
+      freeformText: string | null;
+    }>
   >;
   todayIso: string;
   weekStartIsoForDate: (d: Date) => string;
@@ -133,16 +154,13 @@ export function buildMonthCells(opts: {
         gridStart.getDate() + w * 7 + d,
       );
       const iso = toISODate(date);
-      const entry = entriesByIso.get(iso);
       row.push({
         iso,
         dayNum: date.getDate(),
         inMonth: date.getMonth() === month0,
         isToday: iso === todayIso,
         weekStartIso: weekStartIsoForDate(date),
-        dishName: entry?.dishName ?? null,
-        dishImageUrl: entry?.dishImageUrl ?? null,
-        freeformText: entry?.freeformText ?? null,
+        entries: entriesByIso.get(iso) ?? [],
       });
     }
     weeks.push(row);

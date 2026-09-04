@@ -33,26 +33,29 @@ export default async function TodayPage({
       include: {
         dish: { select: { id: true, name: true, updatedAt: true } },
       },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     }),
     getDishIdsWithImages(),
   ]);
 
-  const byDate = new Map<string, (typeof entries)[number]>();
+  const byDate = new Map<string, typeof entries>();
   for (const e of entries) {
-    byDate.set(toISODate(e.date), e);
+    const iso = toISODate(e.date);
+    const dayEntries = byDate.get(iso) ?? [];
+    dayEntries.push(e);
+    byDate.set(iso, dayEntries);
   }
 
   const days = Array.from({ length: WINDOW_DAYS }, (_, i) => {
     const date = addDays(rangeStart, i);
     const iso = toISODate(date);
-    const entry = byDate.get(iso);
+    const entriesForDay = byDate.get(iso) ?? [];
     return {
       iso,
       label: formatDayLabel(date, realTodayIso),
       isToday: iso === realTodayIso,
       isFocus: iso === focusIso,
-      entry: entry
-        ? {
+      entries: entriesForDay.map((entry) => ({
             id: entry.id,
             dishId: entry.dishId,
             dishName: entry.dish?.name ?? null,
@@ -62,8 +65,7 @@ export default async function TodayPage({
                 : null,
             freeformText: entry.freeformText,
             status: entry.status,
-          }
-        : null,
+          })),
     };
   });
 

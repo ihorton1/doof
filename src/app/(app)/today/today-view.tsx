@@ -13,14 +13,14 @@ type Day = {
   label: string;
   isToday: boolean;
   isFocus: boolean;
-  entry: {
+  entries: {
     id: string;
     dishId: string | null;
     dishName: string | null;
     dishImageUrl: string | null;
     freeformText: string | null;
     status: string;
-  } | null;
+  }[];
 };
 
 export function TodayView({
@@ -190,44 +190,22 @@ function DayCard({
   emphasized?: boolean;
   inLink?: boolean;
 }) {
-  const imageUrl = day.entry?.dishImageUrl ?? null;
-  const hasImage = !!imageUrl;
   return (
     <div
       className={cn(
         "relative h-full rounded-2xl border overflow-hidden flex flex-col",
-        hasImage ? "bg-slate-900" : "bg-white dark:bg-slate-900",
+        "bg-white dark:bg-slate-900",
         emphasized
           ? "border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-sm"
           : "border-slate-200 dark:border-slate-800",
       )}
     >
-      {hasImage && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={imageUrl!}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/30" />
-        </>
-      )}
-      <div
-        className={cn(
-          "relative flex flex-col h-full p-5",
-          hasImage && "text-white",
-        )}
-      >
+      <div className="relative flex flex-col h-full p-5">
         <div className="flex items-baseline justify-between mb-3">
           <h2
             className={cn(
               "font-semibold",
-              day.isToday && !hasImage
-                ? "text-emerald-600 dark:text-emerald-400"
-                : day.isToday && hasImage
-                  ? "text-emerald-300"
-                  : "",
+              day.isToday ? "text-emerald-600 dark:text-emerald-400" : "",
             )}
           >
             {day.label}
@@ -235,16 +213,23 @@ function DayCard({
           <span
             className={cn(
               "text-xs",
-              hasImage ? "text-white/70" : "text-slate-400",
+              "text-slate-400",
             )}
           >
             {day.iso}
           </span>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-          {day.entry ? (
-            <PlannedMeal day={day} inLink={inLink} hasImage={hasImage} />
+        <div
+          className={cn(
+            "flex-1 flex flex-col",
+            day.entries.length > 0
+              ? "items-stretch justify-stretch -mx-5 -mb-5"
+              : "items-center justify-center text-center",
+          )}
+        >
+          {day.entries.length > 0 ? (
+            <PlannedMeals day={day} inLink={inLink} />
           ) : (
             <EmptyMeal day={day} inLink={inLink} />
           )}
@@ -254,43 +239,62 @@ function DayCard({
   );
 }
 
-function PlannedMeal({
+function PlannedMeals({
   day,
   inLink,
-  hasImage,
 }: {
   day: Day;
   inLink?: boolean;
-  hasImage?: boolean;
 }) {
-  const entry = day.entry!;
-  const title = entry.dishName ?? entry.freeformText ?? "—";
-  const titleNode =
-    entry.dishId && !inLink ? (
-      <Link href={`/dishes/${entry.dishId}`} className="hover:underline">
-        {title}
-      </Link>
-    ) : (
-      <span>{title}</span>
-    );
   return (
-    <div className="space-y-2 mt-auto">
-      {!hasImage && (
-        <UtensilsCrossed
-          className={cn(
-            "size-8 mx-auto",
-            entry.status === "skipped" ? "text-slate-400" : "text-slate-500",
-          )}
-        />
-      )}
-      <div
-        className={cn(
-          "text-lg font-medium",
+    <div
+      className="grid h-full min-h-0 w-full"
+      style={{
+        gridTemplateRows: `repeat(${day.entries.length}, minmax(0, 1fr))`,
+      }}
+    >
+      {day.entries.map((entry) => {
+        const title = entry.dishName ?? entry.freeformText ?? "—";
+        const titleClassName = cn(
+          "text-lg font-medium leading-tight text-white drop-shadow-sm",
           entry.status === "skipped" && "line-through opacity-60",
-        )}
-      >
-        {titleNode}
-      </div>
+        );
+        const titleNode =
+          entry.dishId && !inLink ? (
+            <Link
+              href={`/dishes/${entry.dishId}`}
+              className={`${titleClassName} hover:underline`}
+            >
+              {title}
+            </Link>
+          ) : (
+            <span className={titleClassName}>{title}</span>
+          );
+
+        return (
+          <div
+            key={entry.id}
+            className="relative min-h-0 overflow-hidden border-t border-white/20 bg-slate-800"
+          >
+            {entry.dishImageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={entry.dishImageUrl}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-700">
+                <UtensilsCrossed className="size-10 text-white/40" />
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/10" />
+            <div className="relative flex h-full items-end p-5">
+              {titleNode}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
