@@ -222,9 +222,9 @@ function DayCard({
 
         <div
           className={cn(
-            "flex-1 flex flex-col py-2",
+            "flex-1 flex flex-col",
             day.entries.length > 0
-              ? "items-stretch justify-start text-left"
+              ? "items-stretch justify-stretch -mx-5 -mb-5"
               : "items-center justify-center text-center",
           )}
         >
@@ -247,11 +247,16 @@ function PlannedMeals({
   inLink?: boolean;
 }) {
   return (
-    <div className="w-full space-y-3">
+    <div
+      className="grid h-full min-h-0 w-full"
+      style={{
+        gridTemplateRows: `repeat(${day.entries.length}, minmax(0, 1fr))`,
+      }}
+    >
       {day.entries.map((entry) => {
         const title = entry.dishName ?? entry.freeformText ?? "—";
         const titleClassName = cn(
-          "font-medium leading-tight",
+          "text-lg font-medium leading-tight text-white drop-shadow-sm",
           entry.status === "skipped" && "line-through opacity-60",
         );
         const titleNode =
@@ -269,21 +274,24 @@ function PlannedMeals({
         return (
           <div
             key={entry.id}
-            className="flex items-center gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-2"
+            className="relative min-h-0 overflow-hidden border-t border-white/20 bg-slate-800"
           >
             {entry.dishImageUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src={entry.dishImageUrl}
                 alt=""
-                className="size-16 shrink-0 rounded-lg object-cover"
+                className="absolute inset-0 size-full object-cover"
               />
             ) : (
-              <div className="size-16 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                <UtensilsCrossed className="size-6 text-slate-400" />
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-700">
+                <UtensilsCrossed className="size-10 text-white/40" />
               </div>
             )}
-            <div className="min-w-0">{titleNode}</div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/10" />
+            <div className="relative flex h-full items-end p-5">
+              {titleNode}
+            </div>
           </div>
         );
       })}
