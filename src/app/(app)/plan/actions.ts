@@ -14,53 +14,86 @@ async function getOrCreatePlan(weekStartIso: string) {
   return prisma.mealPlan.create({ data: { weekStartDate: weekStart } });
 }
 
-const upsertSchema = z.object({
+const setEntriesSchema = z.object({
   weekStart: z.string(),
   date: z.string(),
   mealSlot: z.enum(MEAL_SLOTS),
-  dishId: z.string().optional().nullable(),
+  dishIds: z.array(z.string()).max(50),
   freeformText: z.string().max(500).optional().nullable(),
 });
 
-export async function upsertEntry(input: z.infer<typeof upsertSchema>) {
-  const data = upsertSchema.parse(input);
+export async function setEntries(input: z.infer<typeof setEntriesSchema>) {
+  const data = setEntriesSchema.parse(input);
   const plan = await getOrCreatePlan(data.weekStart);
   const date = fromISODate(data.date);
-
-  // One entry per (plan, date, slot). Find existing.
-  const existing = await prisma.mealPlanEntry.findFirst({
+  const dishIds = [...new Set(data.dishIds)];
+  const desiredDishIds = new Set(dishIds);
+  const freeformText = (data.freeformText ?? "").trim() || null;
+  const existing = await prisma.mealPlanEntry.findMany({
     where: { mealPlanId: plan.id, date, mealSlot: data.mealSlot },
+    orderBy: { createdAt: "asc" },
   });
 
-  const dishId = data.dishId || null;
-  const freeformText = (data.freeformText ?? "").trim() || null;
+  await prisma.$transaction(async (tx) => {
+    const retainedDishIds = new Set<string>();
+    let retainedFreeform = false;
 
-  if (!dishId && !freeformText) {
-    if (existing) {
-      await prisma.mealPlanEntry.delete({ where: { id: existing.id } });
+    for (const entry of existing) {
+      if (entry.dishId) {
+        if (
+          desiredDishIds.has(entry.dishId) &&
+          !retainedDishIds.has(entry.dishId)
+        ) {
+          retainedDishIds.add(entry.dishId);
+          if (entry.freeformText) {
+            await tx.mealPlanEntry.update({
+              where: { id: entry.id },
+              data: { freeformText: null },
+            });
+          }
+        } else {
+          await tx.mealPlanEntry.delete({ where: { id: entry.id } });
+        }
+      } else if (freeformText && !retainedFreeform) {
+        retainedFreeform = true;
+        if (entry.freeformText !== freeformText) {
+          await tx.mealPlanEntry.update({
+            where: { id: entry.id },
+            data: { freeformText },
+          });
+        }
+      } else {
+        await tx.mealPlanEntry.delete({ where: { id: entry.id } });
+      }
     }
-  } else if (existing) {
-    await prisma.mealPlanEntry.update({
-      where: { id: existing.id },
-      data: {
-        dishId,
-        freeformText,
-        // Reset status when changing what's planned
-        status: existing.status === "skipped" ? "skipped" : "planned",
-        cookedAt: null,
-      },
-    });
-  } else {
-    await prisma.mealPlanEntry.create({
-      data: {
+
+    const additions: Array<{
+      mealPlanId: string;
+      date: Date;
+      mealSlot: (typeof MEAL_SLOTS)[number];
+      dishId: string | null;
+      freeformText?: string | null;
+    }> = dishIds
+      .filter((dishId) => !retainedDishIds.has(dishId))
+      .map((dishId) => ({
         mealPlanId: plan.id,
         date,
         mealSlot: data.mealSlot,
         dishId,
+      }));
+    if (freeformText && !retainedFreeform) {
+      additions.push({
+        mealPlanId: plan.id,
+        date,
+        mealSlot: data.mealSlot,
+        dishId: null,
         freeformText,
-      },
-    });
-  }
+      });
+    }
+    if (additions.length > 0) {
+      await tx.mealPlanEntry.createMany({ data: additions });
+    }
+  });
 
   revalidatePath("/plan");
   revalidatePath("/shop");

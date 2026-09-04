@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X, Pencil, Link2, CheckCircle2, Circle } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
-import { upsertEntry } from "./actions";
+import { setEntries } from "./actions";
 import { linkBoxItem, unlinkBoxItem } from "./box-actions";
 import { ViewToggle } from "./view-toggle";
 
@@ -50,7 +50,7 @@ export function PlanWeek({
   monthParam: string;
   days: { iso: string; label: string }[];
   slots: readonly MealSlot[];
-  grid: Record<string, EntryView | undefined>;
+  grid: Record<string, EntryView[]>;
   dishes: Dish[];
   boxItems: WeekBoxItem[];
 }) {
@@ -110,77 +110,71 @@ export function PlanWeek({
             </div>
             <ul className="divide-y divide-slate-200 dark:divide-slate-800">
               {slots.map((slot) => {
-                const entry = grid[`${day.iso}|${slot}`];
-                const linkingHere = entry && linkingEntryId === entry.id;
+                const entries = grid[`${day.iso}|${slot}`] ?? [];
                 return (
                   <li key={slot} className="px-3 py-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      {entry?.dishImageUrl && (
-                        <div className="w-12 flex-shrink-0 flex items-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={entry.dishImageUrl}
-                            alt=""
-                            className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
-                          />
-                        </div>
-                      )}
-
-                      <EntryBody
-                        entry={entry}
-                        onOpenEmptyEdit={() =>
-                          setEditing({ date: day.iso, slot })
-                        }
-                      />
-
-                      <div className="flex items-center gap-1 shrink-0">
+                    {entries.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditing({ date: day.iso, slot })}
+                        className="w-full text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
+                      >
+                        — empty —
+                      </button>
+                    ) : (
+                      <div className="space-y-1">
+                        {entries.map((entry) => {
+                          const linkingHere = linkingEntryId === entry.id;
+                          return (
+                            <div key={entry.id}>
+                              <div className="flex items-center gap-2">
+                                {entry.dishImageUrl && (
+                                  <div className="w-12 flex-shrink-0 flex items-center">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={entry.dishImageUrl}
+                                      alt=""
+                                      className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
+                                    />
+                                  </div>
+                                )}
+                                <EntryBody entry={entry} />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setLinkingEntryId(linkingHere ? null : entry.id)
+                                  }
+                                  disabled={boxItems.length === 0}
+                                  className="size-8 shrink-0 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30"
+                                  aria-label={`Link produce to ${entry.dishName ?? entry.freeformText ?? day.label}`}
+                                  title={boxItems.length === 0 ? "Add produce box items first" : "Link produce box items"}
+                                >
+                                  <Link2 className="size-4" />
+                                </button>
+                              </div>
+                              {linkingHere && (
+                                <BoxLinkPicker
+                                  entryId={entry.id}
+                                  boxItems={boxItems}
+                                  disabled={isPending}
+                                  onToggle={(itemId, linkedNow) =>
+                                    toggleLink(itemId, entry.id, linkedNow)
+                                  }
+                                  onClose={() => setLinkingEntryId(null)}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
                         <button
                           type="button"
                           onClick={() => setEditing({ date: day.iso, slot })}
-                          className="size-8 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          aria-label={`Edit ${day.label} ${slot}`}
-                          title="Edit"
+                          className="h-8 px-2 inline-flex items-center gap-1 rounded text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
                           <Pencil className="size-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            entry &&
-                            setLinkingEntryId(
-                              linkingHere ? null : entry.id,
-                            )
-                          }
-                          disabled={!entry || boxItems.length === 0}
-                          className="size-8 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30"
-                          aria-label={
-                            entry
-                              ? `Link produce to ${day.label}`
-                              : "Plan a dish first to link produce"
-                          }
-                          title={
-                            boxItems.length === 0
-                              ? "Add produce box items first"
-                              : entry
-                                ? "Link produce box items"
-                                : "Plan a dish first"
-                          }
-                        >
-                          <Link2 className="size-4" />
+                          Edit dishes
                         </button>
                       </div>
-                    </div>
-
-                    {linkingHere && entry && (
-                      <BoxLinkPicker
-                        entryId={entry.id}
-                        boxItems={boxItems}
-                        disabled={isPending}
-                        onToggle={(itemId, linkedNow) =>
-                          toggleLink(itemId, entry.id, linkedNow)
-                        }
-                        onClose={() => setLinkingEntryId(null)}
-                      />
                     )}
                   </li>
                 );
@@ -195,7 +189,7 @@ export function PlanWeek({
           weekStart={weekStart}
           date={editing.date}
           slot={editing.slot}
-          current={grid[`${editing.date}|${editing.slot}`]}
+          current={grid[`${editing.date}|${editing.slot}`] ?? []}
           dishes={dishes}
           onClose={() => setEditing(null)}
         />
@@ -206,23 +200,9 @@ export function PlanWeek({
 
 function EntryBody({
   entry,
-  onOpenEmptyEdit,
 }: {
-  entry: EntryView | undefined;
-  onOpenEmptyEdit: () => void;
+  entry: EntryView;
 }) {
-  if (!entry) {
-    return (
-      <button
-        type="button"
-        onClick={onOpenEmptyEdit}
-        className="flex-1 text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400"
-      >
-        — empty —
-      </button>
-    );
-  }
-
   const label = entry.dishName ?? entry.freeformText ?? "—";
   const className =
     entry.status === "cooked"
@@ -256,16 +236,7 @@ function EntryBody({
     );
   }
 
-  // Freeform-only entry: clicking opens the edit modal (no dish to navigate to).
-  return (
-    <button
-      type="button"
-      onClick={onOpenEmptyEdit}
-      className="flex-1 text-left min-h-9 rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center"
-    >
-      {content}
-    </button>
-  );
+  return <div className="flex-1 min-h-9 px-2 py-1 flex items-center">{content}</div>;
 }
 
 function BoxLinkPicker({
@@ -349,24 +320,26 @@ function EditModal({
   weekStart: string;
   date: string;
   slot: MealSlot;
-  current: EntryView | undefined;
+  current: EntryView[];
   dishes: Dish[];
   onClose: () => void;
 }) {
-  const [dishId, setDishId] = useState(current?.dishId ?? "");
+  const [dishIds, setDishIds] = useState(
+    () => new Set(current.flatMap((entry) => (entry.dishId ? [entry.dishId] : []))),
+  );
   const [freeformText, setFreeformText] = useState(
-    current?.freeformText ?? "",
+    current.find((entry) => entry.freeformText)?.freeformText ?? "",
   );
   const [filter, setFilter] = useState("");
   const [isPending, startTransition] = useTransition();
 
   function save() {
     startTransition(async () => {
-      await upsertEntry({
+      await setEntries({
         weekStart,
         date,
         mealSlot: slot,
-        dishId: dishId || null,
+        dishIds: [...dishIds],
         freeformText: freeformText || null,
       });
       onClose();
@@ -375,11 +348,11 @@ function EditModal({
 
   function clear() {
     startTransition(async () => {
-      await upsertEntry({
+      await setEntries({
         weekStart,
         date,
         mealSlot: slot,
-        dishId: null,
+        dishIds: [],
         freeformText: null,
       });
       onClose();
@@ -421,27 +394,36 @@ function EditModal({
         />
 
         <div className="flex-1 overflow-y-auto -mx-4 px-4 border-y border-slate-200 dark:border-slate-800 py-2">
-          <button
-            type="button"
-            onClick={() => setDishId("")}
-            className={`w-full text-left px-3 py-2 rounded text-sm ${
-              dishId === "" ? "bg-emerald-50 dark:bg-emerald-950" : ""
-            }`}
-          >
-            <span className="text-slate-500">No dish (freeform only)</span>
-          </button>
           {filtered.map((r) => (
             <button
               key={r.id}
               type="button"
-              onClick={() => setDishId(r.id)}
+              onClick={() =>
+                setDishIds((selected) => {
+                  const next = new Set(selected);
+                  if (next.has(r.id)) next.delete(r.id);
+                  else next.add(r.id);
+                  return next;
+                })
+              }
               className={`w-full text-left px-3 py-2 rounded text-sm ${
-                dishId === r.id
+                dishIds.has(r.id)
                   ? "bg-emerald-50 dark:bg-emerald-950 font-medium"
                   : "hover:bg-slate-100 dark:hover:bg-slate-800"
               }`}
             >
-              {r.name}
+              <span className="inline-flex items-center gap-2">
+                <span
+                  className={`size-4 rounded border flex items-center justify-center ${
+                    dishIds.has(r.id)
+                      ? "bg-emerald-600 border-emerald-600 text-white"
+                      : "border-slate-300 dark:border-slate-600"
+                  }`}
+                >
+                  {dishIds.has(r.id) && "✓"}
+                </span>
+                {r.name}
+              </span>
             </button>
           ))}
         </div>
@@ -455,7 +437,7 @@ function EditModal({
         />
 
         <div className="flex gap-2">
-          {current && (
+          {current.length > 0 && (
             <button
               type="button"
               onClick={clear}

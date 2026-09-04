@@ -52,18 +52,23 @@ export default async function PlanPage({
           freeformText: true,
           dish: { select: { id: true, name: true, updatedAt: true } },
         },
-        orderBy: { date: "asc" },
+        orderBy: [{ date: "asc" }, { createdAt: "asc" }],
       }),
       getDishIdsWithImages(),
     ]);
 
     const entriesByIso = new Map<
       string,
-      { dishName: string | null; dishImageUrl: string | null; freeformText: string | null }
+      Array<{
+        dishName: string | null;
+        dishImageUrl: string | null;
+        freeformText: string | null;
+      }>
     >();
     for (const e of entries) {
-      // Single slot (dinner) — last write wins, but there should only be one per date
-      entriesByIso.set(toISODate(e.date), {
+      const iso = toISODate(e.date);
+      const dayEntries = entriesByIso.get(iso) ?? [];
+      dayEntries.push({
         dishName: e.dish?.name ?? null,
         dishImageUrl:
           e.dish && dishIdsWithImages.has(e.dish.id)
@@ -71,6 +76,7 @@ export default async function PlanPage({
             : null,
         freeformText: e.freeformText,
       });
+      entriesByIso.set(iso, dayEntries);
     }
 
     const todayIso = toISODate(now);
@@ -116,6 +122,7 @@ export default async function PlanPage({
       where: { weekStartDate: weekStart },
       include: {
         entries: {
+          orderBy: { createdAt: "asc" },
           include: {
             dish: {
               select: {
@@ -190,11 +197,12 @@ export default async function PlanPage({
     freeformText: string | null;
     status: string;
   };
-  const grid: Record<string, EntryView | undefined> = {};
+  const grid: Record<string, EntryView[]> = {};
   if (plan) {
     for (const e of plan.entries) {
       const key = `${toISODate(e.date)}|${e.mealSlot}`;
-      grid[key] = {
+      const entries = grid[key] ?? [];
+      entries.push({
         id: e.id,
         dishId: e.dishId,
         dishName: e.dish?.name ?? null,
@@ -205,7 +213,8 @@ export default async function PlanPage({
         dishTags: e.dish?.tags.map((dt) => dt.tag.name) ?? [],
         freeformText: e.freeformText,
         status: e.status,
-      };
+      });
+      grid[key] = entries;
     }
   }
 
