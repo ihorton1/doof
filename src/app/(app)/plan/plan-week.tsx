@@ -2,10 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X, Pencil, Link2, CheckCircle2, Circle } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
 import { setEntries } from "./actions";
-import { linkBoxItem, unlinkBoxItem } from "./box-actions";
 import { ViewToggle } from "./view-toggle";
 
 type EntryView = {
@@ -20,17 +19,6 @@ type EntryView = {
 
 type Dish = { id: string; name: string };
 
-export type WeekBoxItem = {
-  id: string;
-  name: string;
-  quantity: string | null;
-  unit: string | null;
-  // entryIds this box item is currently linked to (within this week)
-  linkedEntryIds: string[];
-  // total link count (including links to entries outside this week, in case)
-  totalLinks: number;
-};
-
 export function PlanWeek({
   weekStart,
   weekEnd,
@@ -41,7 +29,6 @@ export function PlanWeek({
   slots,
   grid,
   dishes,
-  boxItems,
 }: {
   weekStart: string;
   weekEnd: string;
@@ -52,24 +39,10 @@ export function PlanWeek({
   slots: readonly MealSlot[];
   grid: Record<string, EntryView[]>;
   dishes: Dish[];
-  boxItems: WeekBoxItem[];
 }) {
   const [editing, setEditing] = useState<{ date: string; slot: MealSlot } | null>(
     null,
   );
-  const [linkingEntryId, setLinkingEntryId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function toggleLink(itemId: string, entryId: string, linkedNow: boolean) {
-    startTransition(async () => {
-      if (linkedNow) {
-        await unlinkBoxItem({ itemId, mealPlanEntryId: entryId });
-      } else {
-        await linkBoxItem({ itemId, mealPlanEntryId: entryId });
-      }
-    });
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -124,45 +97,19 @@ export function PlanWeek({
                     ) : (
                       <div className="space-y-1">
                         {entries.map((entry) => {
-                          const linkingHere = linkingEntryId === entry.id;
                           return (
-                            <div key={entry.id}>
-                              <div className="flex items-center gap-2">
-                                {entry.dishImageUrl && (
-                                  <div className="w-12 flex-shrink-0 flex items-center">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={entry.dishImageUrl}
-                                      alt=""
-                                      className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
-                                    />
-                                  </div>
-                                )}
-                                <EntryBody entry={entry} />
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setLinkingEntryId(linkingHere ? null : entry.id)
-                                  }
-                                  disabled={boxItems.length === 0}
-                                  className="size-8 shrink-0 inline-flex items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30"
-                                  aria-label={`Link produce to ${entry.dishName ?? entry.freeformText ?? day.label}`}
-                                  title={boxItems.length === 0 ? "Add produce box items first" : "Link produce box items"}
-                                >
-                                  <Link2 className="size-4" />
-                                </button>
-                              </div>
-                              {linkingHere && (
-                                <BoxLinkPicker
-                                  entryId={entry.id}
-                                  boxItems={boxItems}
-                                  disabled={isPending}
-                                  onToggle={(itemId, linkedNow) =>
-                                    toggleLink(itemId, entry.id, linkedNow)
-                                  }
-                                  onClose={() => setLinkingEntryId(null)}
-                                />
+                            <div key={entry.id} className="flex items-center gap-2">
+                              {entry.dishImageUrl && (
+                                <div className="w-12 flex-shrink-0 flex items-center">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={entry.dishImageUrl}
+                                    alt=""
+                                    className="size-10 rounded object-cover border border-slate-200 dark:border-slate-700"
+                                  />
+                                </div>
                               )}
+                              <EntryBody entry={entry} />
                             </div>
                           );
                         })}
@@ -237,76 +184,6 @@ function EntryBody({
   }
 
   return <div className="flex-1 min-h-9 px-2 py-1 flex items-center">{content}</div>;
-}
-
-function BoxLinkPicker({
-  entryId,
-  boxItems,
-  disabled,
-  onToggle,
-  onClose,
-}: {
-  entryId: string;
-  boxItems: WeekBoxItem[];
-  disabled: boolean;
-  onToggle: (itemId: string, linkedNow: boolean) => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="mt-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-1">
-      <ul className="max-h-56 overflow-y-auto">
-        {boxItems.map((item) => {
-          const linkedHere = item.linkedEntryIds.includes(entryId);
-          const linkedElsewhere = !linkedHere && item.totalLinks > 0;
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => onToggle(item.id, linkedHere)}
-                disabled={disabled}
-                className="w-full text-left px-2 py-1.5 rounded hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 text-sm flex items-center gap-2"
-              >
-                <span
-                  className={
-                    linkedHere
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-slate-300 dark:text-slate-600"
-                  }
-                  aria-hidden
-                >
-                  {linkedHere ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : (
-                    <Circle className="size-4" />
-                  )}
-                </span>
-                <span className="flex-1 truncate">{item.name}</span>
-                {(item.quantity || item.unit) && (
-                  <span className="text-xs text-slate-500">
-                    {[item.quantity, item.unit].filter(Boolean).join(" ")}
-                  </span>
-                )}
-                {linkedElsewhere && (
-                  <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                    used
-                  </span>
-                )}
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-      <div className="flex justify-end px-1 py-1">
-        <button
-          type="button"
-          onClick={onClose}
-          className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-2 py-1"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  );
 }
 
 function EditModal({

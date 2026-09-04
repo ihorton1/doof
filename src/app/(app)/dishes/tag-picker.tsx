@@ -28,7 +28,10 @@ export function TagPicker({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
+    if (e.key === "Escape") {
+      setInput("");
+      inputRef.current?.blur();
+    } else if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
       if (input.trim()) {
         e.preventDefault();
         add(input);
@@ -42,12 +45,13 @@ export function TagPicker({
   const q = input.trim().toLowerCase();
   const filtered = suggestions
     .filter((s) => !tags.includes(s))
-    .filter((s) => q === "" || s.includes(q))
+    .filter((s) => s.includes(q))
     .slice(0, 8);
 
   const showCreate =
     q.length > 0 && !suggestions.includes(q) && !tags.includes(q);
-  const showDropdown = focused && (filtered.length > 0 || showCreate);
+  const showDropdown =
+    focused && q.length > 0 && (filtered.length > 0 || showCreate);
 
   return (
     <div className="space-y-2">

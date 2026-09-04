@@ -1,0 +1,3 @@
+ALTER TABLE "ProduceBoxItem"
+ADD COLUMN "checked" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "checkedAt" TIMESTAMP(3);

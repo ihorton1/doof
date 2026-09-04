@@ -1,21 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, Trash2, X, CheckCircle2, Circle, ArrowRight } from "lucide-react";
+import { Plus, Trash2, ArrowRight } from "lucide-react";
 import {
   addBoxItem,
-  carryOverUncoveredItems,
+  carryOverUncheckedItems,
   deleteBoxItem,
-  unlinkBoxItem,
+  toggleBoxItem,
 } from "./box-actions";
-
-export type BoxLinkedEntry = {
-  linkId: string;
-  entryId: string;
-  dishName: string | null;
-  freeformText: string | null;
-  dateIso: string;
-};
 
 export type BoxItem = {
   id: string;
@@ -23,23 +15,25 @@ export type BoxItem = {
   quantity: string | null;
   unit: string | null;
   carriedFromId: string | null;
-  links: BoxLinkedEntry[];
+  checked: boolean;
 };
 
 export function ProduceBox({
   weekStart,
   items,
+  suggestions,
 }: {
   weekStart: string;
   items: BoxItem[];
+  suggestions: { names: string[]; units: string[] };
 }) {
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  const covered = items.filter((i) => i.links.length > 0).length;
-  const uncovered = items.length - covered;
+  const checked = items.filter((item) => item.checked).length;
+  const unchecked = items.length - checked;
 
   function add() {
     const trimmed = name.trim();
@@ -63,15 +57,15 @@ export function ProduceBox({
     });
   }
 
-  function unlink(itemId: string, mealPlanEntryId: string) {
+  function toggle(itemId: string, nextChecked: boolean) {
     startTransition(async () => {
-      await unlinkBoxItem({ itemId, mealPlanEntryId });
+      await toggleBoxItem({ itemId, checked: nextChecked });
     });
   }
 
   function carryOver() {
     startTransition(async () => {
-      await carryOverUncoveredItems({ weekStart });
+      await carryOverUncheckedItems({ weekStart });
     });
   }
 
@@ -82,7 +76,7 @@ export function ProduceBox({
         <span className="text-xs text-slate-500 font-normal">
           {items.length === 0
             ? "what came in this week"
-            : `${covered}/${items.length} covered`}
+            : `${checked}/${items.length} checked`}
         </span>
       </div>
 
@@ -90,30 +84,24 @@ export function ProduceBox({
         {items.length === 0 && (
           <li className="px-3 py-2 text-sm text-slate-400">— nothing added yet —</li>
         )}
-        {items.map((item) => {
-          const covered = item.links.length > 0;
-          return (
+        {items.map((item) => (
             <li key={item.id} className="px-3 py-2 text-sm">
-              <div className="flex items-start gap-2">
-                <span
-                  className={
-                    covered
-                      ? "mt-1 text-emerald-600 dark:text-emerald-400"
-                      : "mt-1 text-slate-300 dark:text-slate-600"
-                  }
-                  aria-hidden
-                >
-                  {covered ? (
-                    <CheckCircle2 className="size-4" />
-                  ) : (
-                    <Circle className="size-4" />
-                  )}
-                </span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  disabled={isPending}
+                  onChange={(event) => toggle(item.id, event.target.checked)}
+                  aria-label={`Check ${item.name}`}
+                  className="size-5 accent-emerald-600 shrink-0"
+                />
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span
-                      className={covered ? "text-slate-500 dark:text-slate-400" : ""}
+                      className={
+                        item.checked ? "line-through text-slate-400" : ""
+                      }
                     >
                       {item.name}
                     </span>
@@ -129,29 +117,6 @@ export function ProduceBox({
                     )}
                   </div>
 
-                  {item.links.length > 0 && (
-                    <ul className="mt-1 flex flex-wrap gap-1">
-                      {item.links.map((l) => (
-                        <li
-                          key={l.linkId}
-                          className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs"
-                        >
-                          <span className="truncate max-w-[180px]">
-                            {l.dishName ?? l.freeformText ?? "—"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => unlink(item.id, l.entryId)}
-                            disabled={isPending}
-                            className="size-4 inline-flex items-center justify-center rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900 disabled:opacity-50"
-                            aria-label={`Unlink ${l.dishName ?? l.freeformText ?? ""}`}
-                          >
-                            <X className="size-3" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
 
                 <button
@@ -165,8 +130,7 @@ export function ProduceBox({
                 </button>
               </div>
             </li>
-          );
-        })}
+        ))}
       </ul>
 
       <form
@@ -176,10 +140,22 @@ export function ProduceBox({
         }}
         className="flex flex-wrap gap-2 p-3 border-t border-slate-200 dark:border-slate-800"
       >
+        <datalist id="produce-box-name-suggestions">
+          {suggestions.names.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+        <datalist id="produce-box-unit-suggestions">
+          {suggestions.units.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Item (e.g. kale)"
+          list={name ? "produce-box-name-suggestions" : undefined}
+          autoComplete="off"
           className="flex-1 min-w-[140px] h-10 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
         />
         <input
@@ -192,6 +168,8 @@ export function ProduceBox({
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder="Unit"
+          list={unit ? "produce-box-unit-suggestions" : undefined}
+          autoComplete="off"
           className="w-20 h-10 px-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm"
         />
         <button
@@ -204,7 +182,7 @@ export function ProduceBox({
         </button>
       </form>
 
-      {uncovered > 0 && (
+      {unchecked > 0 && (
         <div className="px-3 pb-3 -mt-1">
           <button
             type="button"
@@ -212,7 +190,7 @@ export function ProduceBox({
             disabled={isPending}
             className="inline-flex items-center gap-1 h-8 px-2 rounded text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
           >
-            Carry {uncovered} uncovered to next week
+            Carry {unchecked} unchecked to next week
             <ArrowRight className="size-3.5" />
           </button>
         </div>

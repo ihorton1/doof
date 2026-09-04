@@ -8,6 +8,7 @@ import {
   RefreshCw,
   Plus,
   Trash2,
+  ChevronDown,
 } from "lucide-react";
 import {
   generateShoppingList,
@@ -176,17 +177,7 @@ export function ShopList({
         <div className="space-y-3">
           {grouped.map(({ cat, items: catItems }) =>
             catItems.length === 0 ? null : (
-              <section
-                key={cat}
-                className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden"
-              >
-                <SectionHeader cat={cat} items={catItems} />
-                <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {catItems.map((item) => (
-                    <ItemRow key={item.id} item={item} />
-                  ))}
-                </ul>
-              </section>
+              <ShopSection key={cat} cat={cat} items={catItems} />
             ),
           )}
         </div>
@@ -210,7 +201,48 @@ export function ShopList({
   );
 }
 
-function SectionHeader({ cat, items }: { cat: string; items: Item[] }) {
+function ShopSection({ cat, items }: { cat: string; items: Item[] }) {
+  const allChecked = items.every((item) => item.checked);
+  const [collapsed, setCollapsed] = useState(allChecked);
+  const wasAllChecked = useRef(allChecked);
+
+  useEffect(() => {
+    if (allChecked !== wasAllChecked.current) {
+      setCollapsed(allChecked);
+      wasAllChecked.current = allChecked;
+    }
+  }, [allChecked]);
+
+  return (
+    <section className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
+      <SectionHeader
+        cat={cat}
+        items={items}
+        collapsed={collapsed}
+        onToggleCollapsed={() => setCollapsed((value) => !value)}
+      />
+      {!collapsed && (
+        <ul className="divide-y divide-slate-200 dark:divide-slate-800">
+          {items.map((item) => (
+            <ItemRow key={item.id} item={item} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SectionHeader({
+  cat,
+  items,
+  collapsed,
+  onToggleCollapsed,
+}: {
+  cat: string;
+  items: Item[];
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+}) {
   const ref = useRef<HTMLInputElement | null>(null);
   const [isPending, startTransition] = useTransition();
   const checkedCount = items.filter((i) => i.checked).length;
@@ -229,7 +261,11 @@ function SectionHeader({ cat, items }: { cat: string; items: Item[] }) {
   }
 
   return (
-    <h2 className="flex items-center gap-3 px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-500 font-semibold">
+    <h2
+      className={`flex items-center gap-3 px-3 py-2 text-xs uppercase tracking-wide text-slate-500 font-semibold ${
+        collapsed ? "" : "border-b border-slate-200 dark:border-slate-800"
+      }`}
+    >
       <input
         ref={ref}
         type="checkbox"
@@ -239,7 +275,24 @@ function SectionHeader({ cat, items }: { cat: string; items: Item[] }) {
         aria-label={`Toggle all ${cat}`}
         className="size-4 accent-emerald-600 flex-shrink-0 normal-case"
       />
-      <span>{cat}</span>
+      <button
+        type="button"
+        onClick={onToggleCollapsed}
+        className="flex flex-1 items-center justify-between gap-2 text-left"
+        aria-expanded={!collapsed}
+      >
+        <span>
+          {cat}
+          {allChecked && (
+            <span className="ml-2 normal-case font-normal">complete</span>
+          )}
+        </span>
+        {collapsed ? (
+          <ChevronRight className="size-4" />
+        ) : (
+          <ChevronDown className="size-4" />
+        )}
+      </button>
     </h2>
   );
 }
