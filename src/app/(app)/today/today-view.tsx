@@ -220,7 +220,14 @@ function DayCard({
           </span>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+        <div
+          className={cn(
+            "flex-1 flex flex-col py-2",
+            day.entries.length > 0
+              ? "items-stretch justify-start text-left"
+              : "items-center justify-center text-center",
+          )}
+        >
           {day.entries.length > 0 ? (
             <PlannedMeals day={day} inLink={inLink} />
           ) : (
@@ -239,54 +246,47 @@ function PlannedMeals({
   day: Day;
   inLink?: boolean;
 }) {
-  const images = day.entries.flatMap((entry) =>
-    entry.dishImageUrl ? [{ src: entry.dishImageUrl, name: entry.dishName }] : [],
-  );
   return (
-    <div className="space-y-3 my-auto w-full">
-      {images.length > 0 ? (
-        <div className="flex justify-center -space-x-5">
-          {images.slice(0, 4).map((image, index) => (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              key={image.src}
-              src={image.src}
-              alt={image.name ?? ""}
-              className="size-20 rounded-xl object-cover border-4 border-white dark:border-slate-900 shadow-sm"
-              style={{ zIndex: images.length - index }}
-            />
-          ))}
-          {images.length > 4 && (
-            <span className="relative z-10 self-center -ml-3 rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-medium">
-              +{images.length - 4}
-            </span>
-          )}
-        </div>
-      ) : (
-        <UtensilsCrossed
-          className="size-8 mx-auto text-slate-400"
-        />
-      )}
-      <div className="space-y-1">
-        {day.entries.map((entry) => {
-          const title = entry.dishName ?? entry.freeformText ?? "—";
-          const className = cn(
-            "text-lg font-medium",
-            entry.status === "skipped" && "line-through opacity-60",
-          );
-          return entry.dishId && !inLink ? (
-            <div key={entry.id}>
-              <Link href={`/dishes/${entry.dishId}`} className={`${className} hover:underline`}>
-                {title}
-              </Link>
-            </div>
-          ) : (
-            <div key={entry.id} className={className}>
+    <div className="w-full space-y-3">
+      {day.entries.map((entry) => {
+        const title = entry.dishName ?? entry.freeformText ?? "—";
+        const titleClassName = cn(
+          "font-medium leading-tight",
+          entry.status === "skipped" && "line-through opacity-60",
+        );
+        const titleNode =
+          entry.dishId && !inLink ? (
+            <Link
+              href={`/dishes/${entry.dishId}`}
+              className={`${titleClassName} hover:underline`}
+            >
               {title}
-            </div>
+            </Link>
+          ) : (
+            <span className={titleClassName}>{title}</span>
           );
-        })}
-      </div>
+
+        return (
+          <div
+            key={entry.id}
+            className="flex items-center gap-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 p-2"
+          >
+            {entry.dishImageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={entry.dishImageUrl}
+                alt=""
+                className="size-16 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="size-16 shrink-0 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <UtensilsCrossed className="size-6 text-slate-400" />
+              </div>
+            )}
+            <div className="min-w-0">{titleNode}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
