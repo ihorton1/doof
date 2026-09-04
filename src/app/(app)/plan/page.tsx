@@ -8,11 +8,10 @@ import {
   MEAL_SLOTS,
   type MealSlot,
 } from "@/lib/utils";
-import { PlanWeek, type WeekBoxItem } from "./plan-week";
+import { PlanWeek } from "./plan-week";
 import { PlanMonth, buildMonthCells } from "./plan-month";
 import { MiscList } from "./misc-list";
 import { TemplatesBar } from "./templates-bar";
-import { ProduceBox, type BoxItem } from "./produce-box";
 
 export const dynamic = "force-dynamic";
 
@@ -116,7 +115,7 @@ export default async function PlanPage({
   const weekStartIso = toISODate(weekStart);
   const weekEnd = addDays(weekStart, 7);
 
-  const [plan, dishes, shoppingList, templates, produceBox, dishIdsWithImages] =
+  const [plan, dishes, shoppingList, templates, dishIdsWithImages] =
     await Promise.all([
     prisma.mealPlan.findUnique({
       where: { weekStartDate: weekStart },
@@ -162,28 +161,6 @@ export default async function PlanPage({
         _count: { select: { entries: true, miscItems: true } },
       },
     }),
-    prisma.produceBox.findUnique({
-      where: { weekStartDate: weekStart },
-      include: {
-        items: {
-          orderBy: { position: "asc" },
-          include: {
-            links: {
-              include: {
-                mealPlanEntry: {
-                  select: {
-                    id: true,
-                    date: true,
-                    freeformText: true,
-                    dish: { select: { name: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
     getDishIdsWithImages(),
   ]);
 
@@ -226,38 +203,8 @@ export default async function PlanPage({
   const prevWeek = toISODate(addDays(weekStart, -7));
   const nextWeek = toISODate(addDays(weekStart, 7));
 
-  const boxItems: BoxItem[] = (produceBox?.items ?? []).map((i) => ({
-    id: i.id,
-    name: i.name,
-    quantity: i.quantity,
-    unit: i.unit,
-    carriedFromId: i.carriedFromId,
-    links: i.links.map((l) => ({
-      linkId: l.id,
-      entryId: l.mealPlanEntryId,
-      dishName: l.mealPlanEntry.dish?.name ?? null,
-      freeformText: l.mealPlanEntry.freeformText,
-      dateIso: toISODate(l.mealPlanEntry.date),
-    })),
-  }));
-
-  const weekEntryIds = new Set(plan?.entries.map((e) => e.id) ?? []);
-  const weekBoxItems: WeekBoxItem[] = (produceBox?.items ?? []).map((i) => ({
-    id: i.id,
-    name: i.name,
-    quantity: i.quantity,
-    unit: i.unit,
-    linkedEntryIds: i.links
-      .map((l) => l.mealPlanEntryId)
-      .filter((id) => weekEntryIds.has(id)),
-    totalLinks: i.links.length,
-  }));
-
   return (
     <>
-      <div className="mb-4">
-        <ProduceBox weekStart={weekStartIso} items={boxItems} />
-      </div>
       <PlanWeek
         weekStart={weekStartIso}
         weekEnd={toISODate(addDays(weekEnd, -1))}
@@ -268,7 +215,6 @@ export default async function PlanPage({
         slots={MEAL_SLOTS as readonly MealSlot[]}
         grid={grid}
         dishes={dishes}
-        boxItems={weekBoxItems}
       />
       <div className="mt-4">
         <MiscList weekStart={weekStartIso} items={shoppingList?.items ?? []} />

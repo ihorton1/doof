@@ -92,6 +92,8 @@ model ProduceBoxItem {
   quantity      String?
   unit          String?
   notes         String?
+  checked       Boolean              @default(false)
+  checkedAt     DateTime?
   position      Int                  @default(0)
   carriedFromId String?
   createdAt     DateTime             @default(now())

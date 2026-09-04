@@ -4,7 +4,7 @@ set -e
 # Ensure data dir exists (Container Apps mounts the share at /data)
 mkdir -p /data
 
-# Run any pending migrations against the mounted SQLite file
+# Run pending migrations before serving traffic.
 echo "Running Prisma migrations..."
 PATH="/opt/prisma/node_modules/.bin:$PATH" prisma migrate deploy
 

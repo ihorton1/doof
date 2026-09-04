@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { Plus } from "lucide-react";
+import { DishList, type DishListItem } from "./dish-list";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,10 @@ export default async function DishesPage({
         name: true,
         description: true,
         updatedAt: true,
-        _count: { select: { ingredients: true } },
+        ingredients: {
+          select: { name: true },
+          orderBy: { position: "asc" },
+        },
         tags: {
           include: { tag: true },
           orderBy: { tag: { name: "asc" } },
@@ -98,6 +102,33 @@ export default async function DishesPage({
     }
   }
 
+  const dishListItems: DishListItem[] = dishes.map((dish) => {
+    const next = nextByDish.get(dish.id);
+    const last = lastByDish.get(dish.id);
+    let status: string;
+    if (next) {
+      status = plannedLabel(dayDiff(today, next));
+    } else if (last) {
+      status = cookedLabel(dayDiff(last, today));
+    } else {
+      status = `${dish.ingredients.length} ingredient${
+        dish.ingredients.length === 1 ? "" : "s"
+      }`;
+    }
+
+    return {
+      id: dish.id,
+      name: dish.name,
+      description: dish.description,
+      imageUrl: dishIdsWithImages.has(dish.id)
+        ? dishImagePath(dish.id, dish.updatedAt)
+        : null,
+      tags: dish.tags.map((dishTag) => dishTag.tag.name),
+      ingredientNames: dish.ingredients.map((ingredient) => ingredient.name),
+      status,
+    };
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -141,7 +172,7 @@ export default async function DishesPage({
         </div>
       )}
 
-      {dishes.length === 0 ? (
+      {dishListItems.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-500">
           <p className="mb-4">No dishes yet.</p>
           <Link
@@ -152,62 +183,7 @@ export default async function DishesPage({
           </Link>
         </div>
       ) : (
-        <ul className="divide-y divide-slate-200 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
-          {dishes.map((r) => {
-            const next = nextByDish.get(r.id);
-            const last = lastByDish.get(r.id);
-            let status: string;
-            if (next) {
-              status = plannedLabel(dayDiff(today, next));
-            } else if (last) {
-              status = cookedLabel(dayDiff(last, today));
-            } else {
-              status = `${r._count.ingredients} ingredient${
-                r._count.ingredients === 1 ? "" : "s"
-              }`;
-            }
-            return (
-              <li key={r.id}>
-                <Link
-                  href={`/dishes/${r.id}`}
-                  className="flex gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                >
-                  {dishIdsWithImages.has(r.id) ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={dishImagePath(r.id, r.updatedAt)}
-                      alt=""
-                      className="size-14 rounded-md object-cover flex-shrink-0 border border-slate-200 dark:border-slate-800"
-                    />
-                  ) : (
-                    <div className="size-14 rounded-md bg-slate-100 dark:bg-slate-800 flex-shrink-0" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{r.name}</div>
-                    {r.description && (
-                      <div className="text-sm text-slate-500 line-clamp-1">
-                        {r.description}
-                      </div>
-                    )}
-                    {r.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {r.tags.map((dt) => (
-                          <span
-                            key={dt.tag.id}
-                            className="inline-flex items-center h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-[10px] font-medium"
-                          >
-                            {dt.tag.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="text-xs text-slate-400 mt-1">{status}</div>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <DishList dishes={dishListItems} />
       )}
     </div>
   );

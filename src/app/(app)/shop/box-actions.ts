@@ -40,7 +40,7 @@ export async function addBoxItem(input: z.infer<typeof addItemSchema>) {
       position: (last?.position ?? -1) + 1,
     },
   });
-  revalidatePath("/plan");
+  revalidatePath("/shop");
 }
 
 const updateItemSchema = z.object({
@@ -59,46 +59,34 @@ export async function updateBoxItem(input: z.infer<typeof updateItemSchema>) {
   if (rest.unit !== undefined) data.unit = rest.unit?.trim() || null;
   if (rest.notes !== undefined) data.notes = rest.notes?.trim() || null;
   await prisma.produceBoxItem.update({ where: { id: itemId }, data });
-  revalidatePath("/plan");
+  revalidatePath("/shop");
 }
 
 export async function deleteBoxItem(itemId: string) {
   await prisma.produceBoxItem.delete({ where: { id: itemId } });
-  revalidatePath("/plan");
+  revalidatePath("/shop");
 }
 
-const linkSchema = z.object({
+const toggleSchema = z.object({
   itemId: z.string(),
-  mealPlanEntryId: z.string(),
+  checked: z.boolean(),
 });
 
-export async function linkBoxItem(input: z.infer<typeof linkSchema>) {
-  const { itemId, mealPlanEntryId } = linkSchema.parse(input);
-  // Idempotent thanks to the @@unique constraint.
-  await prisma.produceBoxItemLink.upsert({
-    where: {
-      produceBoxItemId_mealPlanEntryId: {
-        produceBoxItemId: itemId,
-        mealPlanEntryId,
-      },
+export async function toggleBoxItem(input: z.infer<typeof toggleSchema>) {
+  const { itemId, checked } = toggleSchema.parse(input);
+  await prisma.produceBoxItem.update({
+    where: { id: itemId },
+    data: {
+      checked,
+      checkedAt: checked ? new Date() : null,
     },
-    create: { produceBoxItemId: itemId, mealPlanEntryId },
-    update: {},
   });
-  revalidatePath("/plan");
-}
-
-export async function unlinkBoxItem(input: z.infer<typeof linkSchema>) {
-  const { itemId, mealPlanEntryId } = linkSchema.parse(input);
-  await prisma.produceBoxItemLink.deleteMany({
-    where: { produceBoxItemId: itemId, mealPlanEntryId },
-  });
-  revalidatePath("/plan");
+  revalidatePath("/shop");
 }
 
 const carrySchema = z.object({ weekStart: z.string() });
 
-export async function carryOverUncoveredItems(
+export async function carryOverUncheckedItems(
   input: z.infer<typeof carrySchema>,
 ) {
   const { weekStart } = carrySchema.parse(input);
@@ -110,15 +98,14 @@ export async function carryOverUncoveredItems(
     where: { weekStartDate: fromWeekStart },
     include: {
       items: {
-        include: { _count: { select: { links: true } } },
         orderBy: { position: "asc" },
       },
     },
   });
   if (!fromBox) return { carried: 0 };
 
-  const uncovered = fromBox.items.filter((i) => i._count.links === 0);
-  if (uncovered.length === 0) return { carried: 0 };
+  const unchecked = fromBox.items.filter((i) => !i.checked);
+  if (unchecked.length === 0) return { carried: 0 };
 
   const toBox = await prisma.produceBox.upsert({
     where: { weekStartDate: toWeekStart },
@@ -137,13 +124,13 @@ export async function carryOverUncoveredItems(
   const existing = await prisma.produceBoxItem.findMany({
     where: {
       produceBoxId: toBox.id,
-      carriedFromId: { in: uncovered.map((i) => i.id) },
+      carriedFromId: { in: unchecked.map((i) => i.id) },
     },
     select: { carriedFromId: true },
   });
   const alreadyCarried = new Set(existing.map((e) => e.carriedFromId));
 
-  const toCreate = uncovered.filter((i) => !alreadyCarried.has(i.id));
+  const toCreate = unchecked.filter((i) => !alreadyCarried.has(i.id));
   if (toCreate.length === 0) return { carried: 0 };
 
   await prisma.produceBoxItem.createMany({
@@ -158,6 +145,6 @@ export async function carryOverUncoveredItems(
     })),
   });
 
-  revalidatePath("/plan");
+  revalidatePath("/shop");
   return { carried: toCreate.length };
 }
