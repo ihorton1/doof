@@ -1,11 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Plus } from "lucide-react";
 import { ImagePicker } from "./image-picker";
 import { TagPicker } from "./tag-picker";
+import { IngredientImporter } from "./ingredient-importer";
 
 type Ingredient = {
   name: string;
@@ -33,7 +33,12 @@ export function DishForm({
   initial?: Initial;
   suggestions?: { names: string[]; units: string[]; tags: string[] };
 }) {
-  const router = useRouter();
+  const [name, setName] = useState(initial?.name ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
+  const [autoPreviewUrl, setAutoPreviewUrl] = useState(false);
+  const [urlImportVersion, setUrlImportVersion] = useState(0);
+  const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     initial?.ingredients?.length
       ? initial.ingredients.map((i) => ({
@@ -46,6 +51,12 @@ export function DishForm({
 
   function addRow() {
     setIngredients((rows) => [...rows, { name: "", quantity: "", unit: "" }]);
+  }
+  function previewUrl(value: string) {
+    const url = value.trim();
+    setSourceUrl(url);
+    setAutoPreviewUrl(Boolean(url));
+    setUrlImportVersion((version) => version + 1);
   }
   function removeRow(idx: number) {
     setIngredients((rows) => rows.filter((_, i) => i !== idx));
@@ -68,19 +79,27 @@ export function DishForm({
           <option key={u} value={u} />
         ))}
       </datalist>
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="absolute -top-10 right-0 text-sm text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-      >
-        Cancel
-      </button>
+      <IngredientImporter
+        key={`${sourceUrl}:${urlImportVersion}`}
+        sourceUrl={sourceUrl}
+        autoPreview={autoPreviewUrl}
+        onUseImage={setImageUrl}
+        onReplace={(rows, details) => {
+          setIngredients(rows.map(({ name, quantity, unit }) => ({ name, quantity, unit })));
+          if (details) {
+            setName(details.name);
+            setNotes(details.notes);
+          }
+        }}
+      />
+
       <Field label="Name" required>
         <input
           name="name"
           required
           maxLength={200}
-          defaultValue={initial?.name ?? ""}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           className={inputCls}
         />
       </Field>
@@ -95,7 +114,7 @@ export function DishForm({
       </Field>
 
       <Field label="Image">
-        <ImagePicker initial={initial?.imageUrl ?? null} />
+        <ImagePicker value={imageUrl} onChange={setImageUrl} />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
@@ -113,8 +132,29 @@ export function DishForm({
           <input
             name="sourceUrl"
             type="url"
+            maxLength={500}
             placeholder="https://..."
-            defaultValue={initial?.sourceUrl ?? ""}
+            value={sourceUrl}
+            onChange={(event) => {
+              setSourceUrl(event.target.value);
+              setAutoPreviewUrl(false);
+            }}
+            onPaste={(event) => {
+              const url = event.clipboardData.getData("text/plain");
+              if (url) {
+                event.preventDefault();
+                previewUrl(url);
+              }
+            }}
+            onBlur={() => {
+              if (!autoPreviewUrl && sourceUrl.trim()) previewUrl(sourceUrl);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                previewUrl(sourceUrl);
+              }
+            }}
             className={inputCls}
           />
         </Field>
@@ -179,7 +219,8 @@ export function DishForm({
           name="notes"
           rows={6}
           maxLength={20000}
-          defaultValue={initial?.notes ?? ""}
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
           className={`${inputCls} font-mono text-sm`}
         />
       </Field>

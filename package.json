@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node tests/run.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -14,6 +15,8 @@
     "@prisma/client": "^6.19.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "htmlparser2": "^10.0.0",
+    "ipaddr.js": "^2.2.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "pg": "^8.21.0",

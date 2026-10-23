@@ -70,6 +70,77 @@ Single-password access, no user accounts.
 - `PlanTemplate` → `PlanTemplateEntry` + `PlanTemplateMiscItem` for reusable
   weekly plans.
 
+### Importing ingredients from a recipe URL
+
+On either **New dish** or **Edit dish**, paste the recipe's **Source URL** to
+load its preview automatically. Typed URLs load when you leave the field or
+press Enter. Paste again or press Enter to retry. Existing URLs do not fetch
+just from opening an edit form. Doof reads `Recipe.recipeIngredient`
+from Schema.org JSON-LD embedded in the page, including arrays, `@graph` and
+nested recipes. If there are multiple recipes, choose one in the preview.
+
+The conversion widget shows each original ingredient sentence as selectable
+words. Select one or more words, then assign them to **Quantity**, **Unit** or
+**Ingredient**. Fields start blank: Doof does not guess the website's format.
+Attached measurements such as `200g` or `cup/57` are separately selectable,
+while fractions and hyphenated ingredient names remain intact. You can edit
+the fields directly or uncheck a sentence to skip it.
+Each included sentence must have an ingredient name;
+quantity and unit are optional.
+
+**Replace ingredients** replaces the current form's ingredient rows, but leaves
+all other dish fields unchanged. Nothing is persisted until **Save dish**.
+Discarding the preview or a failed import leaves existing rows untouched.
+Changing the Source URL clears its preview and cancels any pending client request.
+
+When the selected recipe includes an image, the preview also shows it with a
+separate **Use image** button. This explicitly replaces the current form's image
+without changing ingredients; **Replace ingredients** never changes the image.
+Neither is persisted until **Save dish**. Image metadata supports URL strings,
+arrays and `ImageObject` values (`contentUrl` or `url`), including relative URLs
+resolved against the final recipe page URL after redirects. Missing, invalid
+or unloadable images do not prevent ingredient import. The original image URL
+is stored, not a copy of the image; availability depends on the source website.
+
+Imports require a signed-in session and a public HTTP(S) URL using the standard
+port without embedded credentials. Private/reserved network addresses are
+blocked, including DNS results and redirect targets. Requests have a 10-second
+timeout, at most five redirects, and a 2 MB limit on both downloaded and
+decompressed HTML. Up to 20 recipes with 200 ingredients each are supported.
+Pages without embedded recipe JSON-LD, JavaScript-only metadata, login-protected
+pages and sites that block automated requests cannot be imported.
+
+### Importing a recipe from an AI chatbot
+
+On **New dish** or **Edit dish**, select **Import from AI** at the top right to
+reveal the formatting prompt and chatbot response above the recipe name.
+The compact prompt box supports touch,
+trackpad and keyboard scrolling with its scrollbar hidden. Click its copy icon to copy it for use in the
+chatbot conversation containing your recipe. The icon also supports
+keyboard activation. If clipboard access is blocked, the prompt is selected
+for manual copying.
+
+Paste the chatbot's JSON response to preview it immediately. Doof expects
+one `Recipe` object with a `name`, `recipeIngredient` array of ingredient strings,
+and `recipeInstructions` array of cooking-step strings. A surrounding JSON code
+fence is accepted. Pasted responses are validated locally in the browser; Doof
+does not contact an AI service or fetch any links from the response.
+
+The preview shows the name and numbered cooking instructions, alongside the
+same ingredient word-selection workflow used for URL imports. **Use recipe**
+explicitly replaces the current dish name, Notes and ingredient rows. Cooking
+instructions are stored in Notes; images, Source URL, servings, description and
+tags are left unchanged. Nothing is persisted until **Save dish**. Editing the
+pasted response rebuilds its preview and resets ingredient selections; invalid
+or empty input clears the preview. Invalid responses or discarded previews do
+not change the dish.
+
+The prompt is maintained in `src/lib/ai-recipe.ts`. Responses are limited to
+100,000 characters, names to 200, ingredients to 200 lines of 2,000 characters
+each, and cooking steps to 200 entries with a combined numbered Notes length of
+20,000 characters. Oversized or incomplete recipes are rejected rather than
+silently truncated.
+
 ---
 
 ## Local development
@@ -116,6 +187,7 @@ npm run dev                 # http://localhost:3000
 | `npm run build` | Production build (`.next/standalone`). |
 | `npm run start` | Run the production server (after `build`). |
 | `npm run lint` | ESLint. |
+| `npm test` | Recipe extraction, ingredient conversion and URL import tests. |
 
 ### Pointing local dev at the Azure database
 

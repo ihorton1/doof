@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ImagePlus, X } from "lucide-react";
 
 const MAX_DIM = 1200;
@@ -38,18 +38,19 @@ async function fileToResizedDataUrl(file: File): Promise<string> {
 }
 
 export function ImagePicker({
-  initial,
+  value: imageUrl,
+  onChange,
   name = "imageUrl",
 }: {
-  initial?: string | null;
+  value: string | null;
+  onChange: (value: string | null) => void;
   name?: string;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(initial ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  async function handleFile(file: File) {
+  const handleFile = useCallback(async (file: File) => {
     setError(null);
     if (!file.type.startsWith("image/")) {
       setError("Not an image file");
@@ -58,13 +59,13 @@ export function ImagePicker({
     setBusy(true);
     try {
       const url = await fileToResizedDataUrl(file);
-      setImageUrl(url);
+      onChange(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to process image");
     } finally {
       setBusy(false);
     }
-  }
+  }, [onChange]);
 
   // Global paste handler — paste anywhere on the page
   useEffect(() => {
@@ -84,7 +85,7 @@ export function ImagePicker({
     }
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
-  }, []);
+  }, [handleFile]);
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -102,11 +103,17 @@ export function ImagePicker({
           <img
             src={imageUrl}
             alt="Dish preview"
+            referrerPolicy="no-referrer"
+            onError={() => setError("The dish image could not be loaded. Try another image.")}
+            onLoad={() => setError(null)}
             className="w-full max-h-64 object-cover rounded-lg border border-slate-300 dark:border-slate-700"
           />
           <button
             type="button"
-            onClick={() => setImageUrl(null)}
+            onClick={() => {
+              onChange(null);
+              setError(null);
+            }}
             className="absolute top-2 right-2 h-8 w-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
             aria-label="Remove image"
           >
