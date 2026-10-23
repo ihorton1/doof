@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { Home, CalendarDays, Utensils, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,8 +15,32 @@ const TABS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    const layout = nav?.parentElement;
+    if (!nav || !layout) return;
+    const previousHeight = layout.style.getPropertyValue("--bottom-nav-height");
+    function updateHeight() {
+      if (!nav || !layout) return;
+      layout.style.setProperty("--bottom-nav-height", `${nav.getBoundingClientRect().height}px`);
+    }
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(nav, { box: "border-box" });
+    return () => {
+      observer.disconnect();
+      if (previousHeight) {
+        layout.style.setProperty("--bottom-nav-height", previousHeight);
+      } else {
+        layout.style.removeProperty("--bottom-nav-height");
+      }
+    };
+  }, []);
+
   return (
-    <nav className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 pb-[env(safe-area-inset-bottom)]">
+    <nav ref={navRef} className="sticky bottom-0 z-10 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 pb-[env(safe-area-inset-bottom)]">
       <ul className="grid grid-cols-4 max-w-3xl mx-auto">
         {TABS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(`${href}/`);

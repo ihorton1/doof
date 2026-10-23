@@ -92,7 +92,7 @@ export function IngredientImporter({
     ? { name: recipe.name, notes: recipe.notes }
     : undefined;
   const currentDrafts = drafts[selected] ?? [];
-  const included = currentDrafts.filter((draft) => draft.included);
+  const included = currentDrafts.filter((draft) => draft.name.trim());
   const ready = included.length > 0 && included.every((draft) => !ingredientDraftError(draft));
   return (
     <div className={aiOpen || busy || error || message || result
@@ -183,15 +183,9 @@ export function IngredientImporter({
           </div>
           {!ready && (
             <p className="text-sm text-amber-700 dark:text-amber-400">
-              Include at least one ingredient and finish each included sentence before replacing.
+              Enter at least one ingredient name and correct any field errors before applying.
             </p>
           )}
-          <p className="text-sm font-medium">
-            {recipeDetails
-              ? "This will replace the dish name, Notes and all ingredient rows."
-              : "This will replace all current ingredient rows."}
-            {" "}The dish is not saved until you select Save dish.
-          </p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

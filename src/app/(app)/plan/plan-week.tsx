@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
 import type { MealSlot } from "@/lib/utils";
@@ -209,6 +209,28 @@ function EditModal({
   );
   const [filter, setFilter] = useState("");
   const [isPending, startTransition] = useTransition();
+  const overlayRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const overlay = overlayRef.current;
+    if (!overlay) return;
+    const viewport = window.visualViewport;
+    function updateViewport() {
+      if (!overlay) return;
+      // Mobile keyboards can resize and pan the visual viewport without resizing the layout.
+      overlay.style.top = `${viewport?.offsetTop ?? 0}px`;
+      overlay.style.height = `${viewport?.height ?? window.innerHeight}px`;
+    }
+    updateViewport();
+    viewport?.addEventListener("resize", updateViewport);
+    viewport?.addEventListener("scroll", updateViewport);
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      viewport?.removeEventListener("resize", updateViewport);
+      viewport?.removeEventListener("scroll", updateViewport);
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, []);
 
   function save() {
     startTransition(async () => {
@@ -242,15 +264,19 @@ function EditModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center"
+      ref={overlayRef}
+      className="fixed inset-x-0 top-0 h-dvh z-50 bg-black/50 flex items-end sm:items-center justify-center"
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl p-4 space-y-3 max-h-[85vh] flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="plan-dishes-title"
+        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl p-4 gap-3 h-[85%] max-h-[40rem] overflow-y-auto flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between">
-          <h2 className="font-semibold">
+        <div className="flex shrink-0 items-center justify-between">
+          <h2 id="plan-dishes-title" className="font-semibold">
             {date} · <span className="capitalize">{slot}</span>
           </h2>
           <button
@@ -267,14 +293,19 @@ function EditModal({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Search dishes…"
-          className="w-full h-11 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          aria-label="Search dishes"
+          className="w-full shrink-0 h-11 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
         />
 
-        <div className="flex-1 overflow-y-auto -mx-4 px-4 border-y border-slate-200 dark:border-slate-800 py-2">
+        <div className="flex-1 min-h-16 overflow-y-auto overscroll-contain -mx-4 px-4 border-y border-slate-200 dark:border-slate-800 py-2">
+          {filtered.length === 0 && (
+            <p role="status" className="px-3 py-2 text-sm text-slate-500">No dishes found.</p>
+          )}
           {filtered.map((r) => (
             <button
               key={r.id}
               type="button"
+              aria-pressed={dishIds.has(r.id)}
               onClick={() =>
                 setDishIds((selected) => {
                   const next = new Set(selected);
@@ -310,10 +341,10 @@ function EditModal({
           onChange={(e) => setFreeformText(e.target.value)}
           placeholder="Or freeform: leftovers, takeout…"
           maxLength={500}
-          className="w-full h-11 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+          className="w-full shrink-0 h-11 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
         />
 
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           {current.length > 0 && (
             <button
               type="button"

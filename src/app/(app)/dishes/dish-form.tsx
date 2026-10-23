@@ -225,7 +225,7 @@ export function DishForm({
         />
       </Field>
 
-      <div className="flex gap-3">
+      <div className="sticky bottom-[var(--bottom-nav-height,0px)] z-20 flex gap-3 bg-slate-50/95 py-3 backdrop-blur dark:bg-slate-950/95">
         <SaveButton />
       </div>
     </form>

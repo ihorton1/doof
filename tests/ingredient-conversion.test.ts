@@ -10,7 +10,7 @@ import {
 
 test("drafts retain the original sentence without guessing any fields", () => {
   assert.deepEqual(createIngredientDraft("2 x 400g tins tomatoes"), {
-    original: "2 x 400g tins tomatoes", included: true, name: "", quantity: "", unit: "",
+    original: "2 x 400g tins tomatoes", name: "", quantity: "", unit: "",
   });
 });
 
@@ -33,10 +33,11 @@ test("separates website-specific attached measurements without changing the orig
   assert.equal(selectedWords("1 1/2-2 cups", [0, 1, 2, 3]), "1 1/2-2");
 });
 
-test("conversion produces only intended fields, trims input, skips excluded rows and preserves order", () => {
+test("conversion trims input, skips unnamed rows even with measurements, and preserves order", () => {
   const drafts = [
     { ...createIngredientDraft("200 g flour"), quantity: " 200 ", unit: " g ", name: " flour " },
-    { ...createIngredientDraft("For the sauce:"), included: false },
+    createIngredientDraft("For the sauce:"),
+    { ...createIngredientDraft("2 cups water"), name: " \t ", quantity: "2", unit: "cups" },
     { ...createIngredientDraft("salt, to taste"), name: "salt" },
   ];
   const before = structuredClone(drafts);
@@ -47,10 +48,21 @@ test("conversion produces only intended fields, trims input, skips excluded rows
   assert.deepEqual(drafts, before);
 });
 
-test("incomplete or entirely excluded conversions cannot replace existing ingredients", () => {
-  assert.throws(() => convertedIngredients([createIngredientDraft("200 g flour")]), /Finish preparing/);
-  assert.throws(() => convertedIngredients([{ ...createIngredientDraft("salt"), included: false }]), /at least one/);
+test("entirely unnamed conversions cannot replace existing ingredients", () => {
+  assert.throws(() => convertedIngredients([createIngredientDraft("200 g flour")]), /at least one/);
+  assert.throws(() => convertedIngredients([{ ...createIngredientDraft("salt"), name: " " }]), /at least one/);
   assert.throws(() => convertedIngredients([]), /at least one/);
+});
+
+test("clearing a name omits that row and ignores its unused measurement errors", () => {
+  const drafts = [
+    { ...createIngredientDraft("flour"), name: "flour" },
+    { ...createIngredientDraft("salt"), name: "salt", unit: "x".repeat(51) },
+  ];
+  assert.throws(() => convertedIngredients(drafts), /Finish preparing/);
+  drafts[1].name = "";
+  assert.equal(ingredientDraftError(drafts[1]), null);
+  assert.deepEqual(convertedIngredients(drafts), [{ name: "flour", quantity: "", unit: "" }]);
 });
 
 test("field lengths match the dish-save constraints", () => {
@@ -59,5 +71,5 @@ test("field lengths match the dish-save constraints", () => {
   assert.match(ingredientDraftError({ ...draft, name: draft.name + "a" })!, /200/);
   assert.match(ingredientDraftError({ ...draft, quantity: draft.quantity + "b" })!, /50/);
   assert.match(ingredientDraftError({ ...draft, unit: draft.unit + "c" })!, /50/);
-  assert.match(ingredientDraftError({ ...draft, name: " " })!, /name/);
+  assert.equal(ingredientDraftError({ ...draft, name: " " }), null);
 });

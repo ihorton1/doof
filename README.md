@@ -4,6 +4,12 @@ A personal meal-planning web app: manage a catalog of dishes (ingredients, tags,
 images), build a weekly meal plan, generate a shopping list from it, and see a
 "today" view of what's being cooked. Single-user, gated by a single password.
 
+The plan's dish picker keeps a stable height while filtering and follows the
+visible viewport above the mobile keyboard. Its results scroll independently;
+on very short screens, the panel also scrolls to keep its controls reachable.
+On new and edit dish forms, **Save dish** stays above the bottom navigation while
+scrolling, with its position adjusted for the navigation's height and safe-area padding.
+
 ## Tech stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)
@@ -84,9 +90,10 @@ words. Select one or more words, then assign them to **Quantity**, **Unit** or
 **Ingredient**. Fields start blank: Doof does not guess the website's format.
 Attached measurements such as `200g` or `cup/57` are separately selectable,
 while fractions and hyphenated ingredient names remain intact. You can edit
-the fields directly or uncheck a sentence to skip it.
-Each included sentence must have an ingredient name;
-quantity and unit are optional.
+the fields directly. Sentences with a blank ingredient name are automatically
+omitted, even if quantity or unit has been entered. Clear the ingredient name
+to skip a sentence; no checkbox is needed. Quantity and unit are optional.
+At least one named ingredient is required to apply an import.
 
 **Replace ingredients** replaces the current form's ingredient rows, but leaves
 all other dish fields unchanged. Nothing is persisted until **Save dish**.

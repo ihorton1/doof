@@ -129,11 +129,11 @@ test("AI ingredient lines enter the same manual conversion workflow", () => {
   const result = parseAiRecipe(JSON.stringify(recipe));
   const drafts = result.ingredients.map(createIngredientDraft);
   assert.ok(drafts.every((draft) => draft.name === "" && draft.quantity === "" && draft.unit === ""));
-  assert.throws(() => convertedIngredients(drafts), /Finish preparing/);
+  assert.throws(() => convertedIngredients(drafts), /at least one/);
   assert.deepEqual(convertedIngredients([
     { ...drafts[0], name: "rice", quantity: "1", unit: "cup" },
     { ...drafts[1], name: "water", quantity: "2", unit: "cups" },
-    { ...drafts[2], included: false },
+    drafts[2],
   ]), [
     { name: "rice", quantity: "1", unit: "cup" },
     { name: "water", quantity: "2", unit: "cups" },

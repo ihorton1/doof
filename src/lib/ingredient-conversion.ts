@@ -6,11 +6,10 @@ export type IngredientFields = {
 
 export type IngredientDraft = IngredientFields & {
   original: string;
-  included: boolean;
 };
 
 export function createIngredientDraft(original: string): IngredientDraft {
-  return { original, included: true, name: "", quantity: "", unit: "" };
+  return { original, name: "", quantity: "", unit: "" };
 }
 
 export function ingredientWords(sentence: string): { text: string; start: number; end: number }[] {
@@ -41,8 +40,7 @@ export function selectedWords(sentence: string, indices: number[]): string {
 }
 
 export function ingredientDraftError(draft: IngredientDraft): string | null {
-  if (!draft.included) return null;
-  if (!draft.name.trim()) return "Assign or enter an ingredient name, or skip this sentence.";
+  if (!draft.name.trim()) return null;
   if (draft.name.trim().length > 200) return "Ingredient names must be 200 characters or fewer.";
   if (draft.quantity.trim().length > 50 || draft.unit.trim().length > 50) {
     return "Quantity and unit must each be 50 characters or fewer.";
@@ -54,7 +52,7 @@ export function convertedIngredients(drafts: IngredientDraft[]): IngredientField
   if (drafts.some((draft) => ingredientDraftError(draft))) {
     throw new Error("Finish preparing each included ingredient before replacing.");
   }
-  const ingredients = drafts.filter((draft) => draft.included).map((draft) => ({
+  const ingredients = drafts.filter((draft) => draft.name.trim()).map((draft) => ({
     name: draft.name.trim(),
     quantity: draft.quantity.trim(),
     unit: draft.unit.trim(),
