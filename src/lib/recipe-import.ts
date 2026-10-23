@@ -1,5 +1,5 @@
 import { DomUtils, parseDocument } from "htmlparser2";
-import ipaddr from "ipaddr.js";
+import { normalizeImageUrl } from "./image-url";
 
 export type ImportedRecipe = {
   name: string;
@@ -43,23 +43,8 @@ function recipeImage(value: unknown, pageUrl?: string): string | undefined {
     } else if (isRecord(candidate)) {
       pending.push(candidate.url, candidate.contentUrl);
     } else if (typeof candidate === "string" && candidate.trim()) {
-      let url: URL;
-      try {
-        url = new URL(candidate.trim(), pageUrl);
-      } catch {
-        continue;
-      }
-      const hostname = url.hostname.replace(/^\[|\]$/g, "").replace(/\.$/, "");
-      if (
-        !["https:", "http:"].includes(url.protocol) ||
-        url.username || url.password || url.port || url.href.length > 4000 ||
-        (!ipaddr.isValid(hostname) && !hostname.includes(".")) ||
-        hostname.endsWith(".localhost") || hostname.endsWith(".local") ||
-        (ipaddr.isValid(hostname) && ipaddr.parse(hostname).range() !== "unicast")
-      ) {
-        continue;
-      }
-      return url.href;
+      const url = normalizeImageUrl(candidate, pageUrl);
+      if (url) return url;
     }
   }
 }
@@ -115,7 +100,7 @@ export function extractRecipes(html: string, pageUrl?: string): RecipeImportResu
                 warnings.add("A recipe image was skipped because no usable HTTP(S) image URL was found.");
               }
               const recipe: ImportedRecipe = {
-                name: name || "Untitled recipe",
+                name,
                 ingredients,
                 ...(imageUrl ? { imageUrl } : {}),
               };

@@ -95,19 +95,27 @@ omitted, even if quantity or unit has been entered. Clear the ingredient name
 to skip a sentence; no checkbox is needed. Quantity and unit are optional.
 At least one named ingredient is required to apply an import.
 
-**Replace ingredients** replaces the current form's ingredient rows, but leaves
-all other dish fields unchanged. Nothing is persisted until **Save dish**.
-Discarding the preview or a failed import leaves existing rows untouched.
+**Use recipe** applies the JSON recipe title and replaces the ingredient rows.
+If the JSON has no usable title, **Replace ingredients** leaves the dish name
+unchanged; the preview uses "Untitled recipe" only as a display label.
+URL imports leave Notes and the other dish fields unchanged. Nothing is persisted
+until **Save dish**. Discarding the preview or a failed import leaves existing
+fields untouched.
 Changing the Source URL clears its preview and cancels any pending client request.
 
 When the selected recipe includes an image, the preview also shows it with a
 separate **Use image** button. This explicitly replaces the current form's image
-without changing ingredients; **Replace ingredients** never changes the image.
+without changing ingredients; applying the recipe never changes the image.
+The button turns green and reads **Image selected** while that image is selected,
+instead of showing a selection banner. Replacing or removing the form's image
+updates the button state.
 Neither is persisted until **Save dish**. Image metadata supports URL strings,
 arrays and `ImageObject` values (`contentUrl` or `url`), including relative URLs
 resolved against the final recipe page URL after redirects. Missing, invalid
 or unloadable images do not prevent ingredient import. The original image URL
 is stored, not a copy of the image; availability depends on the source website.
+After saving, the shared dish-image endpoint serves uploaded data URLs directly
+and redirects valid remote image URLs to their source with no referrer.
 
 Imports require a signed-in session and a public HTTP(S) URL using the standard
 port without embedded credentials. Private/reserved network addresses are

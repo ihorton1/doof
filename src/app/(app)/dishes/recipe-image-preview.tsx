@@ -5,10 +5,12 @@ import { useState } from "react";
 export function RecipeImagePreview({
   imageUrl,
   recipeName,
+  selected,
   onUse,
 }: {
   imageUrl: string;
   recipeName: string;
+  selected: boolean;
   onUse: (imageUrl: string) => void;
 }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "failed">("loading");
@@ -36,10 +38,15 @@ export function RecipeImagePreview({
       <button
         type="button"
         disabled={status !== "loaded"}
+        aria-pressed={selected}
         onClick={() => onUse(imageUrl)}
-        className="min-h-10 px-3 rounded-lg border border-emerald-600 text-sm text-emerald-700 dark:text-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
+        className={`min-h-10 px-3 rounded-lg border border-emerald-600 text-sm disabled:opacity-60 disabled:cursor-not-allowed ${
+          selected
+            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+            : "text-emerald-700 dark:text-emerald-400"
+        }`}
       >
-        Use image
+        {selected ? "Image selected" : "Use image"}
       </button>
     </div>
   );

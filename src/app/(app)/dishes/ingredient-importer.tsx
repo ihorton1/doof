@@ -16,7 +16,7 @@ import { AiRecipeInput } from "./ai-recipe-input";
 
 const resultSchema = z.object({
   recipes: z.array(z.object({
-    name: z.string(),
+    name: z.string().trim().max(200),
     ingredients: z.array(z.string().min(1)).min(1).max(200),
     imageUrl: z.url().optional(),
   })).min(1).max(20),
@@ -26,12 +26,14 @@ const resultSchema = z.object({
 export function IngredientImporter({
   sourceUrl,
   autoPreview,
+  currentImageUrl,
   onReplace,
   onUseImage,
 }: {
   sourceUrl: string;
   autoPreview: boolean;
-  onReplace: (ingredients: IngredientFields[], details?: { name: string; notes: string }) => void;
+  currentImageUrl: string | null;
+  onReplace: (ingredients: IngredientFields[], details?: { name: string; notes?: string }) => void;
   onUseImage: (imageUrl: string) => void;
 }) {
   const [busy, setBusy] = useState(autoPreview);
@@ -88,8 +90,9 @@ export function IngredientImporter({
   }, [autoPreview, sourceUrl]);
 
   const recipe = result?.recipes[selected];
-  const recipeDetails = previewSource === "ai" && recipe?.notes !== undefined
-    ? { name: recipe.name, notes: recipe.notes }
+  const recipeName = recipe?.name || "Untitled recipe";
+  const recipeDetails = recipe?.name.trim()
+    ? { name: recipe.name, ...(previewSource === "ai" ? { notes: recipe.notes } : {}) }
     : undefined;
   const currentDrafts = drafts[selected] ?? [];
   const included = currentDrafts.filter((draft) => draft.name.trim());
@@ -141,27 +144,25 @@ export function IngredientImporter({
                 className="block w-full mt-1 h-12 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
               >
                 {result.recipes.map((recipe, index) => (
-                  <option key={index} value={index}>{recipe.name} ({recipe.ingredients.length} ingredients)</option>
+                  <option key={index} value={index}>{recipe.name || "Untitled recipe"} ({recipe.ingredients.length} ingredients)</option>
                 ))}
               </select>
             </label>
           ) : (
-            <h3 className="font-medium">{recipe.name}</h3>
+            <h3 className="font-medium">{recipeName}</h3>
           )}
           {recipe.imageUrl ? (
             <RecipeImagePreview
               key={recipe.imageUrl}
               imageUrl={recipe.imageUrl}
-              recipeName={recipe.name}
-              onUse={(url) => {
-                onUseImage(url);
-                setMessage("Recipe image selected. Save the dish to keep it.");
-              }}
+              recipeName={recipeName}
+              selected={currentImageUrl === recipe.imageUrl}
+              onUse={onUseImage}
             />
           ) : previewSource === "url" ? (
             <p className="text-sm text-slate-500">No image was found for this recipe.</p>
           ) : null}
-          {recipeDetails && (
+          {recipeDetails?.notes !== undefined && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Cooking instructions (Notes)</h4>
               <p className="text-sm whitespace-pre-wrap break-words">{recipeDetails.notes}</p>
@@ -194,9 +195,11 @@ export function IngredientImporter({
               onClick={() => {
                 const ingredients = convertedIngredients(currentDrafts);
                 onReplace(ingredients, recipeDetails);
-                setMessage(recipeDetails
+                setMessage(recipeDetails?.notes !== undefined
                   ? `Applied recipe name, cooking instructions and ${ingredients.length} prepared ingredients. Save the dish when ready.`
-                  : `Replaced ingredient rows with ${ingredients.length} prepared ingredients. Review them and save the dish when ready.`);
+                  : recipeDetails
+                    ? `Applied recipe name and ${ingredients.length} prepared ingredients. Save the dish when ready.`
+                    : `Replaced ingredient rows with ${ingredients.length} prepared ingredients. Review them and save the dish when ready.`);
                 setResult(null);
               }}
             >

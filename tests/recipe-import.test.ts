@@ -43,10 +43,18 @@ test("reads different HTML attribute styles and decodes ingredient markup and en
   });
 });
 
-test("accepts a single text ingredient and supplies a label for an unnamed recipe", () => {
+test("accepts a single text ingredient without inventing a missing recipe name", () => {
   assert.deepEqual(extractRecipes(jsonLd({ "@type": "Recipe", recipeIngredient: "salt" })).recipes, [
-    { name: "Untitled recipe", ingredients: ["salt"] },
+    { name: "", ingredients: ["salt"] },
   ]);
+});
+
+test("only actual JSON recipe names are available for importing into the dish title", () => {
+  for (const name of [undefined, null, 12, " \t ", "<b></b>"]) {
+    assert.equal(extractRecipes(jsonLd({ ...recipe, name })).recipes[0].name, "");
+  }
+  assert.equal(extractRecipes(jsonLd({ ...recipe, name: " <b>Rice &amp; beans</b> " })).recipes[0].name, "Rice & beans");
+  assert.equal(extractRecipes(jsonLd({ ...recipe, name: "a".repeat(201) })).recipes[0].name.length, 200);
 });
 
 test("ignores unrelated scripts and deduplicates identical recipes across blocks", () => {

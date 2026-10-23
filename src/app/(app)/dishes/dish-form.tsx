@@ -83,12 +83,13 @@ export function DishForm({
         key={`${sourceUrl}:${urlImportVersion}`}
         sourceUrl={sourceUrl}
         autoPreview={autoPreviewUrl}
+        currentImageUrl={imageUrl}
         onUseImage={setImageUrl}
         onReplace={(rows, details) => {
           setIngredients(rows.map(({ name, quantity, unit }) => ({ name, quantity, unit })));
           if (details) {
             setName(details.name);
-            setNotes(details.notes);
+            if (details.notes !== undefined) setNotes(details.notes);
           }
         }}
       />
