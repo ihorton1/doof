@@ -3,194 +3,36 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getRollingList, requireShoppingSession } from "@/lib/shopping-data";
 import { fromISODate, categorize } from "@/lib/utils";
 
-async function getOrCreateList(weekStartIso: string) {
-  const weekStart = fromISODate(weekStartIso);
-  const existing = await prisma.shoppingList.findUnique({
-    where: { weekStartDate: weekStart },
+async function getList(weekStart?: string) {
+  if (!weekStart) return getRollingList();
+  const weekStartDate = fromISODate(weekStart);
+  return prisma.shoppingList.upsert({
+    where: { weekStartDate }, create: { weekStartDate }, update: {},
   });
-  if (existing) return existing;
-  return prisma.shoppingList.create({ data: { weekStartDate: weekStart } });
-}
-
-/**
- * Aggregate ingredients from all "planned" or "cooked" entries that have a
- * dish in the given week, then merge with existing manual items.
- *
- * Strategy:
- *  - Auto items (source=auto) are regenerated from the meal plan every time.
- *  - Manual items (source=manual) are preserved, including their checked state.
- *  - For auto items, we preserve `checked` if a same-name+unit auto item exists.
- */
-export async function generateShoppingList(
-  weekStartIso: string,
-  mode: "aisle" | "dish" = "aisle",
-) {
-  const list = await getOrCreateList(weekStartIso);
-  const weekStart = fromISODate(weekStartIso);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
-
-  const entries = await prisma.mealPlanEntry.findMany({
-    where: {
-      date: { gte: weekStart, lt: weekEnd },
-      status: { in: ["planned", "cooked"] },
-      dishId: { not: null },
-    },
-    include: { dish: { include: { ingredients: true } } },
-  });
-
-  // Preserve checked state of existing auto items by (name|unit|dishId) key.
-  const existingAuto = await prisma.shoppingListItem.findMany({
-    where: { shoppingListId: list.id, source: "auto" },
-  });
-  const checkedMap = new Map<string, boolean>();
-  for (const item of existingAuto) {
-    const key = `${item.name.toLowerCase()}|${item.unit ?? ""}|${item.dishId ?? ""}`;
-    if (item.checked) checkedMap.set(key, true);
-  }
-
-  type Row = {
-    name: string;
-    unit: string | null;
-    quantity: string | null;
-    category: string | null;
-    dishId: string | null;
-  };
-  const rows: Row[] = [];
-
-  if (mode === "dish") {
-    // One row per (dish, ingredient). Group label = dish name (stored in category).
-    for (const entry of entries) {
-      if (!entry.dish) continue;
-      for (const ing of entry.dish.ingredients) {
-        rows.push({
-          name: ing.name.trim(),
-          unit: (ing.unit ?? "").trim() || null,
-          quantity: ing.quantity ?? null,
-          category: entry.dish.name,
-          dishId: entry.dish.id,
-        });
-      }
-    }
-    // De-dup identical (dish, name, unit) so the same dish planned twice doesn't
-    // show duplicates; sum quantities when numeric.
-    const dedup = new Map<string, Row>();
-    for (const r of rows) {
-      const key = `${r.dishId}|${r.name.toLowerCase()}|${r.unit ?? ""}`;
-      const existing = dedup.get(key);
-      if (!existing) {
-        dedup.set(key, { ...r });
-      } else if (r.quantity) {
-        if (existing.quantity == null) {
-          existing.quantity = r.quantity;
-        } else {
-          const a = Number(existing.quantity);
-          const b = Number(r.quantity);
-          existing.quantity = Number.isFinite(a) && Number.isFinite(b)
-            ? String(a + b)
-            : `${existing.quantity} + ${r.quantity}`;
-        }
-      }
-    }
-    rows.length = 0;
-    rows.push(...dedup.values());
-  } else {
-    // Aisle mode: aggregate by (name|unit) across all dishes.
-    type Agg = Row & { dishIds: Set<string> };
-    const agg = new Map<string, Agg>();
-    for (const entry of entries) {
-      if (!entry.dish) continue;
-      for (const ing of entry.dish.ingredients) {
-        const name = ing.name.trim();
-        const unit = (ing.unit ?? "").trim() || null;
-        const key = `${name.toLowerCase()}|${unit ?? ""}`;
-        const existing = agg.get(key);
-        if (!existing) {
-          agg.set(key, {
-            name,
-            unit,
-            quantity: ing.quantity ?? null,
-            category: categorize(name),
-            dishId: null,
-            dishIds: new Set([entry.dish.id]),
-          });
-        } else {
-          existing.dishIds.add(entry.dish.id);
-          if (ing.quantity) {
-            if (existing.quantity == null) {
-              existing.quantity = ing.quantity;
-            } else {
-              const a = Number(existing.quantity);
-              const b = Number(ing.quantity);
-              existing.quantity = Number.isFinite(a) && Number.isFinite(b)
-                ? String(a + b)
-                : `${existing.quantity} + ${ing.quantity}`;
-            }
-          }
-        }
-      }
-    }
-    for (const a of agg.values()) {
-      rows.push({
-        name: a.name,
-        unit: a.unit,
-        quantity: a.quantity,
-        category: a.category,
-        dishId: a.dishIds.size === 1 ? Array.from(a.dishIds)[0] : null,
-      });
-    }
-  }
-
-  await prisma.$transaction([
-    prisma.shoppingListItem.deleteMany({
-      where: { shoppingListId: list.id, source: "auto" },
-    }),
-    prisma.shoppingListItem.createMany({
-      data: rows.map((r, i) => {
-        const key = `${r.name.toLowerCase()}|${r.unit ?? ""}|${r.dishId ?? ""}`;
-        return {
-          shoppingListId: list.id,
-          name: r.name,
-          quantity: r.quantity,
-          unit: r.unit,
-          category: r.category,
-          source: "auto",
-          dishId: r.dishId,
-          checked: checkedMap.get(key) ?? false,
-          checkedAt: checkedMap.get(key) ? new Date() : null,
-          position: i,
-        };
-      }),
-    }),
-  ]);
-
-  revalidatePath("/shop");
 }
 
 const addItemSchema = z.object({
-  weekStart: z.string(),
-  name: z.string().min(1).max(200),
-  quantity: z.string().max(50).optional().nullable(),
-  unit: z.string().max(50).optional().nullable(),
+  weekStart: z.iso.date().optional(),
+  name: z.string().trim().min(1).max(200),
+  quantity: z.string().trim().max(50).optional().nullable(),
+  unit: z.string().trim().max(50).optional().nullable(),
 });
 
 export async function addManualItem(input: z.infer<typeof addItemSchema>) {
+  await requireShoppingSession();
   const data = addItemSchema.parse(input);
-  const list = await getOrCreateList(data.weekStart);
+  const list = await getList(data.weekStart);
   const max = await prisma.shoppingListItem.aggregate({
-    where: { shoppingListId: list.id },
-    _max: { position: true },
+    where: { shoppingListId: list.id }, _max: { position: true },
   });
   await prisma.shoppingListItem.create({
     data: {
-      shoppingListId: list.id,
-      name: data.name,
-      quantity: data.quantity || null,
-      unit: data.unit || null,
-      category: categorize(data.name),
-      source: "manual",
+      shoppingListId: list.id, name: data.name,
+      quantity: data.quantity || null, unit: data.unit || null,
+      category: categorize(data.name), source: "manual",
       position: (max._max.position ?? 0) + 1,
     },
   });
@@ -198,26 +40,13 @@ export async function addManualItem(input: z.infer<typeof addItemSchema>) {
   revalidatePath("/meals");
 }
 
-const toggleSchema = z.object({
-  itemId: z.string(),
-  checked: z.boolean(),
-});
-
-export async function toggleItem(input: z.infer<typeof toggleSchema>) {
-  const { itemId, checked } = toggleSchema.parse(input);
-  await prisma.shoppingListItem.update({
-    where: { id: itemId },
-    data: { checked, checkedAt: checked ? new Date() : null },
-  });
-  revalidatePath("/shop");
-}
-
 const toggleManySchema = z.object({
-  itemIds: z.array(z.string()).min(1),
+  itemIds: z.array(z.string().min(1)).min(1),
   checked: z.boolean(),
 });
 
 export async function toggleItems(input: z.infer<typeof toggleManySchema>) {
+  await requireShoppingSession();
   const { itemIds, checked } = toggleManySchema.parse(input);
   await prisma.shoppingListItem.updateMany({
     where: { id: { in: itemIds } },
@@ -226,16 +55,38 @@ export async function toggleItems(input: z.infer<typeof toggleManySchema>) {
   revalidatePath("/shop");
 }
 
-export async function deleteItem(itemId: string) {
-  await prisma.shoppingListItem.delete({ where: { id: itemId } });
+const deleteManySchema = z.object({ itemIds: z.array(z.string().min(1)).min(1) });
+
+export async function deleteItems(input: z.infer<typeof deleteManySchema>) {
+  await requireShoppingSession();
+  const { itemIds } = deleteManySchema.parse(input);
+  await prisma.$transaction([
+    prisma.shoppingListItem.updateMany({
+      where: { id: { in: itemIds }, source: "auto" }, data: { dismissed: true },
+    }),
+    prisma.shoppingListItem.deleteMany({
+      where: { id: { in: itemIds }, source: "manual" },
+    }),
+  ]);
   revalidatePath("/shop");
   revalidatePath("/meals");
 }
 
-export async function clearChecked(weekStartIso: string) {
-  const list = await getOrCreateList(weekStartIso);
-  await prisma.shoppingListItem.deleteMany({
-    where: { shoppingListId: list.id, checked: true },
-  });
+export async function deleteItem(itemId: string) {
+  await deleteItems({ itemIds: [itemId] });
+}
+
+export async function clearChecked() {
+  await requireShoppingSession();
+  const list = await getRollingList();
+  await prisma.$transaction([
+    prisma.shoppingListItem.updateMany({
+      where: { shoppingListId: list.id, source: "auto", checked: true },
+      data: { dismissed: true },
+    }),
+    prisma.shoppingListItem.deleteMany({
+      where: { shoppingListId: list.id, source: "manual", checked: true },
+    }),
+  ]);
   revalidatePath("/shop");
 }

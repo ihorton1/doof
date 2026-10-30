@@ -305,14 +305,13 @@ function PlannedMeals({
 }
 
 function EmptyMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
-  const weekStart = getWeekStartIso(day.iso);
   return (
     <div className="text-slate-400 text-sm space-y-2">
       <UtensilsCrossed className="size-8 mx-auto opacity-30" />
       <div>Nothing planned</div>
       {!inLink && (
         <Link
-          href={`/meals?week=${weekStart}`}
+          href="/meals"
           className="text-emerald-600 hover:underline text-sm font-medium inline-block"
         >
           {day.isToday ? "Plan dinner →" : "Add a dish →"}
@@ -320,16 +319,4 @@ function EmptyMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
       )}
     </div>
   );
-}
-
-function getWeekStartIso(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  date.setDate(date.getDate() + diff);
-  const yy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yy}-${mm}-${dd}`;
 }

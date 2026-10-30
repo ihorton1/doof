@@ -1,31 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { fromISODate, MEAL_SLOTS, ENTRY_STATUSES } from "@/lib/utils";
-
-async function getOrCreatePlan(weekStartIso: string) {
-  const weekStart = fromISODate(weekStartIso);
-  const existing = await prisma.mealPlan.findUnique({
-    where: { weekStartDate: weekStart },
-  });
-  if (existing) return existing;
-  return prisma.mealPlan.create({ data: { weekStartDate: weekStart } });
-}
+import { isValidSessionCookie, SESSION_COOKIE_NAME } from "@/lib/auth";
+import { readMealGrid } from "@/lib/meal-days-data";
+import { addDays, fromISODate, getWeekStart, MEAL_SLOTS, ENTRY_STATUSES } from "@/lib/utils";
 
 const setEntriesSchema = z.object({
-  weekStart: z.string(),
-  date: z.string(),
+  date: z.iso.date(),
   mealSlot: z.enum(MEAL_SLOTS),
   dishIds: z.array(z.string()).max(50),
   freeformText: z.string().max(500).optional().nullable(),
 });
 
 export async function setEntries(input: z.infer<typeof setEntriesSchema>) {
+  const cookie = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!isValidSessionCookie(cookie)) throw new Error("Sign in again before editing meals.");
   const data = setEntriesSchema.parse(input);
-  const plan = await getOrCreatePlan(data.weekStart);
   const date = fromISODate(data.date);
+  const weekStartDate = getWeekStart(date);
+  const plan = await prisma.mealPlan.upsert({
+    where: { weekStartDate },
+    create: { weekStartDate },
+    update: {},
+  });
   const dishIds = [...new Set(data.dishIds)];
   const desiredDishIds = new Set(dishIds);
   const freeformText = (data.freeformText ?? "").trim() || null;
@@ -99,6 +99,8 @@ export async function setEntries(input: z.infer<typeof setEntriesSchema>) {
   revalidatePath("/plan");
   revalidatePath("/shop");
   revalidatePath("/today");
+  const grid = await readMealGrid(date, addDays(date, 1));
+  return grid[`${data.date}|${data.mealSlot}`] ?? [];
 }
 
 const setStatusSchema = z.object({
@@ -118,4 +120,5 @@ export async function setEntryStatus(input: z.infer<typeof setStatusSchema>) {
   revalidatePath("/meals");
   revalidatePath("/plan");
   revalidatePath("/today");
+  revalidatePath("/shop");
 }

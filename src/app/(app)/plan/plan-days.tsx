@@ -1,88 +1,96 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, X, Pencil } from "lucide-react";
-import type { MealSlot } from "@/lib/utils";
-import { setEntries } from "./actions";
+import { X, Pencil } from "lucide-react";
+import { MEAL_SLOTS, type MealSlot } from "@/lib/utils";
+import { fetchMealDays, type MealDaysPage, type MealEntryView as EntryView, type MealGrid, type SaveMealsAction } from "@/lib/meal-days";
 import { ViewToggle } from "./view-toggle";
-
-type EntryView = {
-  id: string;
-  dishId: string | null;
-  dishName: string | null;
-  dishImageUrl: string | null;
-  dishTags: string[];
-  freeformText: string | null;
-  status: string;
-};
 
 type Dish = { id: string; name: string };
 
-export function PlanWeek({
-  weekStart,
-  weekEnd,
-  prevWeek,
-  nextWeek,
+export function PlanDays({
+  initialPage,
   monthParam,
-  days,
-  slots,
-  grid,
   dishes,
+  saveMealsAction,
 }: {
-  weekStart: string;
-  weekEnd: string;
-  prevWeek: string;
-  nextWeek: string;
+  initialPage: MealDaysPage;
   monthParam: string;
-  days: { iso: string; label: string }[];
-  slots: readonly MealSlot[];
-  grid: Record<string, EntryView[]>;
   dishes: Dish[];
+  saveMealsAction: SaveMealsAction;
 }) {
   const [editing, setEditing] = useState<{ date: string; slot: MealSlot } | null>(
     null,
   );
+  const [pages, setPages] = useState<MealDaysPage[]>([]);
+  const [savedGrid, setSavedGrid] = useState<MealGrid>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const requestRef = useRef<AbortController | null>(null);
+  const nextDate = pages.at(-1)?.nextDate ?? initialPage.nextDate;
+  const days = [initialPage, ...pages].flatMap((page) => page.days);
+  const grid: MealGrid = Object.assign({}, initialPage.grid, ...pages.map((page) => page.grid), savedGrid);
+
+  const loadMore = useCallback(async () => {
+    if (requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await fetchMealDays(nextDate, controller.signal);
+      if (controller.signal.aborted) return;
+      if ("error" in result) setLoadError(result.error);
+      else setPages((loaded) => [...loaded, result.page]);
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      console.error("Failed to load more meal days", error);
+      setLoadError("Could not load more days. Please try again.");
+    } finally {
+      if (!controller.signal.aborted) {
+        requestRef.current = null;
+        setIsLoading(false);
+      }
+    }
+  }, [nextDate]);
+
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || editing || isLoading || loadError ||
+      typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+    }, { rootMargin: "0px 0px 100px 0px" });
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [editing, isLoading, loadError, loadMore]);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Link
-          href={`/meals?week=${prevWeek}`}
-          className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-          aria-label="Previous week"
-        >
-          <ChevronLeft className="size-5" />
-        </Link>
-        <div className="text-center">
-          <h1 className="font-bold">Week of</h1>
-          <div className="text-sm text-slate-500">
-            {weekStart} → {weekEnd}
-          </div>
-        </div>
-        <Link
-          href={`/meals?week=${nextWeek}`}
-          className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-          aria-label="Next week"
-        >
-          <ChevronRight className="size-5" />
-        </Link>
-      </div>
-
+      <h1 className="text-center font-bold">Meals</h1>
       <div className="flex justify-center">
-        <ViewToggle current="week" weekParam={weekStart} monthParam={monthParam} />
+        <ViewToggle current="day" monthParam={monthParam} />
       </div>
 
       <div className="space-y-3">
         {days.map((day) => (
           <div
             key={day.iso}
+            data-meal-date={day.iso}
             className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
           >
             <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800 font-medium text-sm">
               {day.label}
             </div>
             <ul className="divide-y divide-slate-200 dark:divide-slate-800">
-              {slots.map((slot) => {
+              {MEAL_SLOTS.map((slot) => {
                 const entries = grid[`${day.iso}|${slot}`] ?? [];
                 return (
                   <li key={slot} className="px-3 py-2 text-sm">
@@ -131,13 +139,33 @@ export function PlanWeek({
         ))}
       </div>
 
+      <div ref={sentinelRef} className="text-center" aria-busy={isLoading}>
+        {loadError && <p role="alert" className="mb-2 text-sm text-rose-600">{loadError}</p>}
+        <button
+          type="button"
+          onClick={() => void loadMore()}
+          disabled={isLoading}
+          className="min-h-11 rounded-lg px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 dark:text-emerald-400 dark:hover:bg-emerald-950"
+        >
+          {isLoading ? "Loading more days..." : loadError ? "Try again" : "Load next 7 days"}
+        </button>
+        <p role="status" className="sr-only">
+          {isLoading ? "Loading the next seven days." : `${days.length} days loaded.`}
+        </p>
+      </div>
+
       {editing && (
         <EditModal
-          weekStart={weekStart}
           date={editing.date}
           slot={editing.slot}
           current={grid[`${editing.date}|${editing.slot}`] ?? []}
           dishes={dishes}
+          saveMealsAction={saveMealsAction}
+          onSaved={(entries) => {
+            const key = `${editing.date}|${editing.slot}`;
+            setSavedGrid((saved) => ({ ...saved, [key]: entries }));
+            setEditing(null);
+          }}
           onClose={() => setEditing(null)}
         />
       )}
@@ -187,18 +215,20 @@ function EntryBody({
 }
 
 function EditModal({
-  weekStart,
   date,
   slot,
   current,
   dishes,
+  saveMealsAction,
+  onSaved,
   onClose,
 }: {
-  weekStart: string;
   date: string;
   slot: MealSlot;
   current: EntryView[];
   dishes: Dish[];
+  saveMealsAction: SaveMealsAction;
+  onSaved: (entries: EntryView[]) => void;
   onClose: () => void;
 }) {
   const [dishIds, setDishIds] = useState(
@@ -209,6 +239,7 @@ function EditModal({
   );
   const [filter, setFilter] = useState("");
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -232,29 +263,21 @@ function EditModal({
     };
   }, []);
 
-  function save() {
+  function save(clear = false) {
+    setError(null);
     startTransition(async () => {
-      await setEntries({
-        weekStart,
-        date,
-        mealSlot: slot,
-        dishIds: [...dishIds],
-        freeformText: freeformText || null,
-      });
-      onClose();
-    });
-  }
-
-  function clear() {
-    startTransition(async () => {
-      await setEntries({
-        weekStart,
-        date,
-        mealSlot: slot,
-        dishIds: [],
-        freeformText: null,
-      });
-      onClose();
+      try {
+        const entries = await saveMealsAction({
+          date,
+          mealSlot: slot,
+          dishIds: clear ? [] : [...dishIds],
+          freeformText: clear ? null : freeformText || null,
+        });
+        onSaved(entries);
+      } catch (error) {
+        console.error("Failed to save meal dishes", error);
+        setError("Could not save your dishes. Please try again.");
+      }
     });
   }
 
@@ -267,7 +290,7 @@ function EditModal({
     <div
       ref={overlayRef}
       className="fixed inset-x-0 top-0 h-dvh z-50 bg-black/50 flex items-end sm:items-center justify-center"
-      onClick={onClose}
+      onClick={() => { if (!isPending) onClose(); }}
     >
       <div
         role="dialog"
@@ -283,6 +306,7 @@ function EditModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={isPending}
             className="size-8 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Close"
           >
@@ -315,6 +339,7 @@ function EditModal({
 
         <input
           value={filter}
+          disabled={isPending}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Search dishes…"
           aria-label="Search dishes"
@@ -330,6 +355,7 @@ function EditModal({
               key={r.id}
               type="button"
               aria-pressed={dishIds.has(r.id)}
+              disabled={isPending}
               onClick={() =>
                 setDishIds((selected) => {
                   const next = new Set(selected);
@@ -362,17 +388,19 @@ function EditModal({
 
         <input
           value={freeformText}
+          disabled={isPending}
           onChange={(e) => setFreeformText(e.target.value)}
           placeholder="Or freeform: leftovers, takeout…"
           maxLength={500}
           className="w-full shrink-0 h-11 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
         />
 
+        {error && <p role="alert" className="shrink-0 text-sm text-rose-600">{error}</p>}
         <div className="flex shrink-0 gap-2">
           {current.length > 0 && (
             <button
               type="button"
-              onClick={clear}
+              onClick={() => save(true)}
               disabled={isPending}
               className="h-11 px-4 rounded-lg border border-slate-300 dark:border-slate-700 text-rose-600"
             >
@@ -381,7 +409,7 @@ function EditModal({
           )}
           <button
             type="button"
-            onClick={save}
+            onClick={() => save()}
             disabled={isPending}
             className="flex-1 h-11 rounded-lg bg-emerald-600 text-white font-medium disabled:opacity-50"
           >

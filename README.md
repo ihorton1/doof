@@ -1,7 +1,7 @@
 # doof
 
 A personal meal-planning web app: manage a catalog of dishes (ingredients, tags,
-images), build a weekly meal plan, generate a shopping list from it, and see a
+images), plan upcoming meals, generate a shopping list from them, and see a
 "today" view of what's being cooked. Single-user, gated by a single password.
 
 The plan's dish picker keeps a stable height while filtering and follows the
@@ -28,7 +28,31 @@ days with multiple meals use a vertical snap carousel with a peek of the next
 card. Longer titles and tags remain accessible by scrolling.
 
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
-**Meals** (`/meals`) retains the weekly/monthly schedule, editing and templates.
+**Meals** (`/meals`) opens in **Day** view with today and the next six days.
+Scrolling to the bottom loads another seven consecutive days, across week,
+month and year boundaries. A **Load next 7 days** button also supports keyboard
+navigation and manual loading; failed loads keep the existing days and offer a retry.
+There are no week-navigation controls. **Day / Month** switches to the monthly
+calendar, whose previous/next month controls remain available. A date with one
+dish opens that recipe; a date with multiple dishes opens a recipe chooser.
+Empty dates and freeform-only dates have no recipe link. Returning to Day starts
+at today. Legacy week URLs also show the rolling Day view.
+Meals remain stored against their own calendar weeks. Misc shopping extras and Saved plans
+are no longer displayed on Meals; their components, actions and stored data are
+retained for possible reuse elsewhere.
+**Shop** automatically includes ingredients from non-skipped dishes planned for
+today or any future date, without a week selector or an end-date cutoff. Its
+**By dish / By aisle** toggle defaults to By dish and changes grouping only:
+quantities and checkmarks are shared between the views. Identical ingredients
+are totalled per dish, or across dishes in aisle view; a partially checked aisle
+ingredient is shown with a mixed checkbox. Manual extras and checkmarks persist.
+Deleted ingredients and cleared checked ingredients stay hidden during automatic
+updates while their planned dish still requires them.
+The **Produce box** persists across weeks until **Reset** is confirmed, which
+empties both checked and unchecked contents. Individual additions, checks and
+removals remain available; there is no weekly carry-over control.
+On first use, the current or most recent past shopping list and produce box are
+retained as the persistent lists; older weekly records remain stored.
 In the Meals dish editor, selected dishes appear as removable chips above search
 and remain available to deselect even when the search hides their result rows.
 The popup heading shows only the date, without the meal-slot label.
@@ -101,7 +125,7 @@ src/
 ├── app/
 │   ├── (app)/            # authenticated route group
 │   │   ├── dishes/       # dish CRUD (server actions in actions.ts)
-│   │   ├── meals/        # weekly/monthly meal schedule
+│   │   ├── meals/        # rolling day/monthly meal schedule
 │   │   ├── plan/         # saved-dish carousel + scheduling actions/components
 │   │   ├── shop/         # shopping list (generated from plan)
 │   │   ├── today/        # daily cooking view
@@ -147,8 +171,11 @@ Single-password access, no user accounts.
   notes, servings.
 - `MealPlan` (keyed by `weekStartDate`) → `MealPlanEntry` (date + meal slot,
   optional `dishId` or `freeformText`, status `planned|cooked|skipped`).
-- `ShoppingList` → `ShoppingListItem` (auto-generated from plan or manual,
-  with `category`, `checked` state).
+- `ShoppingList` → `ShoppingListItem` (auto-generated from upcoming meals or manual,
+  with `category`, `checked` and `dismissed` state). The active list has unique
+  `scope = "rolling"`; legacy weekly records retain their original dates.
+- `ProduceBox` → `ProduceBoxItem` uses the same rolling scope to keep contents
+  independent of calendar weeks. Reset removes items, not the active box record.
 - `PlanTemplate` → `PlanTemplateEntry` + `PlanTemplateMiscItem` for reusable
   weekly plans.
 

@@ -2,11 +2,9 @@ import Link from "next/link";
 
 export function ViewToggle({
   current,
-  weekParam,
   monthParam,
 }: {
-  current: "week" | "month";
-  weekParam: string;
+  current: "day" | "month";
   monthParam: string;
 }) {
   const base =
@@ -16,13 +14,15 @@ export function ViewToggle({
   return (
     <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800">
       <Link
-        href={`/meals?view=week&week=${weekParam}`}
-        className={`${base} ${current === "week" ? active : inactive}`}
+        href="/meals"
+        aria-current={current === "day" ? "page" : undefined}
+        className={`${base} ${current === "day" ? active : inactive}`}
       >
-        Week
+        Day
       </Link>
       <Link
         href={`/meals?view=month&month=${monthParam}`}
+        aria-current={current === "month" ? "page" : undefined}
         className={`${base} ${current === "month" ? active : inactive}`}
       >
         Month

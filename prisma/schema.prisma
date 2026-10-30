@@ -78,6 +78,7 @@ model MealPlanEntry {
 
 model ProduceBox {
   id            String           @id @default(cuid())
+  scope         String?          @unique
   weekStartDate DateTime         @unique
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -123,6 +124,7 @@ model ProduceBoxItemLink {
 
 model ShoppingList {
   id            String             @id @default(cuid())
+  scope         String?            @unique
   weekStartDate DateTime           @unique
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
@@ -140,6 +142,7 @@ model ShoppingListItem {
   source          String       @default("auto") // auto | manual
   dishId          String?
   checked         Boolean      @default(false)
+  dismissed       Boolean      @default(false)
   checkedAt       DateTime?
   position        Int          @default(0)
   createdAt       DateTime     @default(now())

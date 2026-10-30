@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ViewToggle } from "./view-toggle";
+import { MonthDay } from "./month-day";
 import { toISODate } from "@/lib/utils";
 
 type Cell = {
@@ -8,8 +9,8 @@ type Cell = {
   dayNum: number;
   inMonth: boolean;
   isToday: boolean;
-  weekStartIso: string;
   entries: {
+    dishId: string | null;
     dishName: string | null;
     dishImageUrl: string | null;
     freeformText: string | null;
@@ -21,14 +22,12 @@ export function PlanMonth({
   monthParam,
   prevMonth,
   nextMonth,
-  weekParam,
   weeks,
 }: {
   monthLabel: string;
   monthParam: string;
   prevMonth: string;
   nextMonth: string;
-  weekParam: string;
   weeks: Cell[][];
 }) {
   const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -55,7 +54,7 @@ export function PlanMonth({
       </div>
 
       <div className="flex justify-center">
-        <ViewToggle current="month" weekParam={weekParam} monthParam={monthParam} />
+        <ViewToggle current="month" monthParam={monthParam} />
       </div>
 
       <div className="grid grid-cols-7 gap-px text-center text-xs font-medium text-slate-500">
@@ -76,9 +75,14 @@ export function PlanMonth({
             return label ? [label] : [];
           });
           return (
-            <Link
+            <MonthDay
               key={cell.iso}
-              href={`/meals?view=week&week=${cell.weekStartIso}`}
+              iso={cell.iso}
+              recipes={cell.entries.flatMap((entry) => entry.dishId ? [{
+                id: entry.dishId,
+                name: entry.dishName ?? "View recipe",
+                imageUrl: entry.dishImageUrl,
+              }] : [])}
               className={`relative min-h-[68px] sm:min-h-[88px] p-1 flex flex-col items-stretch text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 ${
                 cell.inMonth ? "" : "opacity-40"
               }`}
@@ -115,7 +119,7 @@ export function PlanMonth({
                   {labels.join(", ")}
                 </div>
               ) : null}
-            </Link>
+            </MonthDay>
           );
         })}
       </div>
@@ -129,15 +133,15 @@ export function buildMonthCells(opts: {
   entriesByIso: Map<
     string,
     Array<{
+      dishId: string | null;
       dishName: string | null;
       dishImageUrl: string | null;
       freeformText: string | null;
     }>
   >;
   todayIso: string;
-  weekStartIsoForDate: (d: Date) => string;
 }): Cell[][] {
-  const { year, month0, entriesByIso, todayIso, weekStartIsoForDate } = opts;
+  const { year, month0, entriesByIso, todayIso } = opts;
   const firstOfMonth = new Date(year, month0, 1);
   // Week starts Monday (matches getWeekStart)
   const dow = firstOfMonth.getDay(); // 0=Sun..6=Sat
@@ -159,7 +163,6 @@ export function buildMonthCells(opts: {
         dayNum: date.getDate(),
         inMonth: date.getMonth() === month0,
         isToday: iso === todayIso,
-        weekStartIso: weekStartIsoForDate(date),
         entries: entriesByIso.get(iso) ?? [],
       });
     }

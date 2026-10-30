@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getRollingBox, requireShoppingSession } from "@/lib/shopping-data";
 import { addDays, fromISODate, toISODate } from "@/lib/utils";
 
 async function getOrCreateBox(weekStartIso: string) {
@@ -15,16 +16,17 @@ async function getOrCreateBox(weekStartIso: string) {
 }
 
 const addItemSchema = z.object({
-  weekStart: z.string(),
-  name: z.string().min(1).max(120),
+  weekStart: z.iso.date().optional(),
+  name: z.string().trim().min(1).max(120),
   quantity: z.string().max(40).optional().nullable(),
   unit: z.string().max(40).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
 });
 
 export async function addBoxItem(input: z.infer<typeof addItemSchema>) {
+  await requireShoppingSession();
   const data = addItemSchema.parse(input);
-  const box = await getOrCreateBox(data.weekStart);
+  const box = data.weekStart ? await getOrCreateBox(data.weekStart) : await getRollingBox();
   const last = await prisma.produceBoxItem.findFirst({
     where: { produceBoxId: box.id },
     orderBy: { position: "desc" },
@@ -52,6 +54,7 @@ const updateItemSchema = z.object({
 });
 
 export async function updateBoxItem(input: z.infer<typeof updateItemSchema>) {
+  await requireShoppingSession();
   const { itemId, ...rest } = updateItemSchema.parse(input);
   const data: Record<string, unknown> = {};
   if (rest.name !== undefined) data.name = rest.name.trim();
@@ -63,6 +66,7 @@ export async function updateBoxItem(input: z.infer<typeof updateItemSchema>) {
 }
 
 export async function deleteBoxItem(itemId: string) {
+  await requireShoppingSession();
   await prisma.produceBoxItem.delete({ where: { id: itemId } });
   revalidatePath("/shop");
 }
@@ -73,6 +77,7 @@ const toggleSchema = z.object({
 });
 
 export async function toggleBoxItem(input: z.infer<typeof toggleSchema>) {
+  await requireShoppingSession();
   const { itemId, checked } = toggleSchema.parse(input);
   await prisma.produceBoxItem.update({
     where: { id: itemId },
@@ -89,6 +94,7 @@ const carrySchema = z.object({ weekStart: z.string() });
 export async function carryOverUncheckedItems(
   input: z.infer<typeof carrySchema>,
 ) {
+  await requireShoppingSession();
   const { weekStart } = carrySchema.parse(input);
   const fromWeekStart = fromISODate(weekStart);
   const toWeekStartIso = toISODate(addDays(fromWeekStart, 7));
@@ -147,4 +153,11 @@ export async function carryOverUncheckedItems(
 
   revalidatePath("/shop");
   return { carried: toCreate.length };
+}
+
+export async function resetProduceBox() {
+  await requireShoppingSession();
+  const box = await getRollingBox();
+  await prisma.produceBoxItem.deleteMany({ where: { produceBoxId: box.id } });
+  revalidatePath("/shop");
 }
