@@ -312,7 +312,7 @@ function EmptyMeal({ day, inLink }: { day: Day; inLink?: boolean }) {
       <div>Nothing planned</div>
       {!inLink && (
         <Link
-          href={`/plan?week=${weekStart}`}
+          href={`/meals?week=${weekStart}`}
           className="text-emerald-600 hover:underline text-sm font-medium inline-block"
         >
           {day.isToday ? "Plan dinner →" : "Add a dish →"}

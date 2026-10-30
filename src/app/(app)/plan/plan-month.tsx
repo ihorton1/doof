@@ -36,7 +36,7 @@ export function PlanMonth({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Link
-          href={`/plan?view=month&month=${prevMonth}`}
+          href={`/meals?view=month&month=${prevMonth}`}
           className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Previous month"
         >
@@ -46,7 +46,7 @@ export function PlanMonth({
           <h1 className="font-bold">{monthLabel}</h1>
         </div>
         <Link
-          href={`/plan?view=month&month=${nextMonth}`}
+          href={`/meals?view=month&month=${nextMonth}`}
           className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Next month"
         >
@@ -78,7 +78,7 @@ export function PlanMonth({
           return (
             <Link
               key={cell.iso}
-              href={`/plan?view=week&week=${cell.weekStartIso}`}
+              href={`/meals?view=week&week=${cell.weekStartIso}`}
               className={`relative min-h-[68px] sm:min-h-[88px] p-1 flex flex-col items-stretch text-left bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 ${
                 cell.inMonth ? "" : "opacity-40"
               }`}

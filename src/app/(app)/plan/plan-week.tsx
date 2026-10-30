@@ -47,7 +47,7 @@ export function PlanWeek({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Link
-          href={`/plan?week=${prevWeek}`}
+          href={`/meals?week=${prevWeek}`}
           className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Previous week"
         >
@@ -60,7 +60,7 @@ export function PlanWeek({
           </div>
         </div>
         <Link
-          href={`/plan?week=${nextWeek}`}
+          href={`/meals?week=${nextWeek}`}
           className="h-10 w-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
           aria-label="Next week"
         >

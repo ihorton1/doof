@@ -65,7 +65,7 @@ export async function saveTemplate(input: z.infer<typeof saveSchema>) {
   void we;
   void toISODate;
 
-  revalidatePath("/plan");
+  revalidatePath("/meals");
 }
 
 const applySchema = z.object({
@@ -122,11 +122,12 @@ export async function applyTemplate(input: z.infer<typeof applySchema>) {
     }),
   ]);
 
-  revalidatePath("/plan");
+  revalidatePath("/meals");
   revalidatePath("/shop");
+  revalidatePath("/plan");
 }
 
 export async function deleteTemplate(id: string) {
   await prisma.planTemplate.delete({ where: { id } });
-  revalidatePath("/plan");
+  revalidatePath("/meals");
 }

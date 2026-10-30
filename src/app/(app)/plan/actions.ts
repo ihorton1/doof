@@ -95,6 +95,7 @@ export async function setEntries(input: z.infer<typeof setEntriesSchema>) {
     }
   });
 
+  revalidatePath("/meals");
   revalidatePath("/plan");
   revalidatePath("/shop");
   revalidatePath("/today");
@@ -114,6 +115,7 @@ export async function setEntryStatus(input: z.infer<typeof setStatusSchema>) {
       cookedAt: status === "cooked" ? new Date() : null,
     },
   });
+  revalidatePath("/meals");
   revalidatePath("/plan");
   revalidatePath("/today");
 }

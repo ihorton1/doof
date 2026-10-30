@@ -109,12 +109,10 @@ export default async function DishDetailPage({
           <ul className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-800">
             {dish.ingredients.map((ing) => (
               <li key={ing.id} className="px-4 py-2 flex gap-2 text-sm">
-                {(ing.quantity || ing.unit) && (
-                  <span className="text-slate-500 w-24 flex-shrink-0">
-                    {[ing.quantity, ing.unit].filter(Boolean).join(" ")}
-                  </span>
-                )}
-                <span>{ing.name}</span>
+                <span className="text-slate-500 w-24 flex-shrink-0 break-words">
+                  {[ing.quantity, ing.unit].filter(Boolean).join(" ")}
+                </span>
+                <span className="min-w-0 break-words">{ing.name}</span>
               </li>
             ))}
           </ul>

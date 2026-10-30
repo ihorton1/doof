@@ -108,6 +108,7 @@ export async function createDish(formData: FormData) {
     },
   });
   revalidatePath("/dishes");
+  revalidatePath("/plan");
   redirect(`/dishes/${dish.id}`);
 }
 
@@ -142,6 +143,7 @@ export async function updateDish(id: string, formData: FormData) {
     }),
   ]);
   revalidatePath("/dishes");
+  revalidatePath("/plan");
   revalidatePath(`/dishes/${id}`);
   redirect(`/dishes/${id}`);
 }
@@ -149,5 +151,6 @@ export async function updateDish(id: string, formData: FormData) {
 export async function deleteDish(id: string) {
   await prisma.dish.delete({ where: { id } });
   revalidatePath("/dishes");
+  revalidatePath("/plan");
   redirect("/dishes");
 }

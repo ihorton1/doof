@@ -16,13 +16,13 @@ export function ViewToggle({
   return (
     <div className="inline-flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800">
       <Link
-        href={`/plan?view=week&week=${weekParam}`}
+        href={`/meals?view=week&week=${weekParam}`}
         className={`${base} ${current === "week" ? active : inactive}`}
       >
         Week
       </Link>
       <Link
-        href={`/plan?view=month&month=${monthParam}`}
+        href={`/meals?view=month&month=${monthParam}`}
         className={`${base} ${current === "month" ? active : inactive}`}
       >
         Month

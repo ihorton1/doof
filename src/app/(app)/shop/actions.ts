@@ -195,7 +195,7 @@ export async function addManualItem(input: z.infer<typeof addItemSchema>) {
     },
   });
   revalidatePath("/shop");
-  revalidatePath("/plan");
+  revalidatePath("/meals");
 }
 
 const toggleSchema = z.object({
@@ -229,7 +229,7 @@ export async function toggleItems(input: z.infer<typeof toggleManySchema>) {
 export async function deleteItem(itemId: string) {
   await prisma.shoppingListItem.delete({ where: { id: itemId } });
   revalidatePath("/shop");
-  revalidatePath("/plan");
+  revalidatePath("/meals");
 }
 
 export async function clearChecked(weekStartIso: string) {

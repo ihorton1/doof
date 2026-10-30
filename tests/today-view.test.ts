@@ -55,7 +55,7 @@ test("Today preserves multiple meals, freeform meals and skipped styling without
 test("empty days retain planning links and desktop day navigation", () => {
   const html = renderToday([]);
   assert.match(html, /Nothing planned/);
-  assert.match(html, /href="\/plan\?week=2026-10-26"/);
+  assert.match(html, /href="\/meals\?week=2026-10-26"/);
   assert.match(html, /Plan dinner/);
   assert.match(html, /aria-label="Previous day"/);
   assert.match(html, /aria-label="Next day"/);

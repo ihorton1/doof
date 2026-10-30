@@ -27,6 +27,37 @@ without a duplicate ISO date. Each meal has its own box;
 days with multiple meals use a vertical snap carousel with a peek of the next
 card. Longer titles and tags remain accessible by scrolling.
 
+The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
+**Meals** (`/meals`) retains the weekly/monthly schedule, editing and templates.
+**Plan** (`/plan`) browses saved dishes in a horizontal photo-card carousel.
+Suggestions use past, non-skipped plan dates as a proxy for cooking history.
+Dishes planned in the previous 14 days appear after eligible suggestions;
+dishes scheduled for today or any future date appear last. Eligible familiar
+dishes are ranked by the number of distinct planned days in the previous 90
+days, with an untried recipe inserted after every three familiar recipes where
+available. Older history still distinguishes tried from untried recipes.
+Ties use a deterministic daily shuffle, so unchanged data gives the same order
+throughout the day. Cooldown dishes are oldest-planned first. Every saved dish
+remains accessible; short pools are filled from the remaining recipes.
+Tag chips above the carousel filter recipes by a single tag. Tapping the
+selected tag again clears the filter. Changing tags starts at the first
+matching recipe and cancels any pending single-tap navigation. Filtering keeps
+the recommendation order; it does not rerank or reshuffle recipes.
+Tap a card to view its recipe; double-tap (double-click with a mouse) to open a
+scrolling picker covering Today and the next 29 days. Single-tap navigation waits
+400 ms to distinguish it from a double-tap. Keyboard users can focus a card and
+press Enter to view the recipe or Space to choose a day. Scroll, tap a date, or use
+the arrow keys, Home/End and Page Up/Down, then confirm **Add to ...**.
+This adds dinner without replacing existing meals or freeform notes; adding the
+same dish to the same day again is a no-op with an explicit confirmation.
+**Dishes** remains the recipe-management tab. The carousel has no visible arrows
+or count; left/right arrow keys remain available when the carousel is focused.
+The Dishes search matches dish names, ingredients and tags together, ignoring
+case and surrounding whitespace. Suggestions cover all three, and matching
+ingredients appear beneath results. Existing tag filters still narrow the list.
+Dish-detail ingredient names share one column, with space reserved for quantity
+and unit even when neither is set.
+
 ## Tech stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)
@@ -43,7 +74,8 @@ src/
 ├── app/
 │   ├── (app)/            # authenticated route group
 │   │   ├── dishes/       # dish CRUD (server actions in actions.ts)
-│   │   ├── plan/         # weekly/monthly plan + plan templates
+│   │   ├── meals/        # weekly/monthly meal schedule
+│   │   ├── plan/         # saved-dish carousel + scheduling actions/components
 │   │   ├── shop/         # shopping list (generated from plan)
 │   │   ├── today/        # daily cooking view
 │   │   └── layout.tsx
