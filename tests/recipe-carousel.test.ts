@@ -47,6 +47,15 @@ test("empty saved dishes link to dish creation without an empty carousel", () =>
   assert.doesNotMatch(html, /aria-roledescription="carousel"/);
 });
 
+test("recipe photos fill a positioned frame inside an explicitly sized card link", () => {
+  const html = render([dish]);
+  assert.match(html, /<a[^>]*class="flex h-full /);
+  assert.match(html, /class="relative min-h-32 flex-1 basis-0 overflow-hidden/);
+  assert.match(html, /<img[^>]*class="absolute inset-0 size-full object-cover"/);
+  const placeholder = render([{ ...dish, imageUrl: null }]);
+  assert.match(placeholder, /class="absolute inset-0 flex items-center justify-center"/);
+});
+
 test("Plan offers available tags once, alphabetically, with no tag selected initially", () => {
   const html = render([dish, { ...dish, id: "dish-2", tags: ["quick", "weeknight"] }]);
   assert.match(html, /aria-label="Filter recipes by tag"/);

@@ -174,25 +174,25 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
                     setSelected(dish);
                   }
                 }}
-                className="flex min-h-full touch-manipulation select-none flex-col gap-4 rounded-[2rem] p-5 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-slate-400"
+                className="flex h-full touch-manipulation select-none flex-col gap-4 rounded-[2rem] p-5 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-slate-400"
               >
-              <div className="min-h-32 flex-1 basis-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
-                {dish.imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={dish.imageUrl} alt="" draggable={false} className="size-full object-cover" />
-                ) : (
-                  <div className="flex size-full items-center justify-center">
-                    <UtensilsCrossed className="size-12 text-slate-300 dark:text-slate-600" aria-hidden />
-                  </div>
+                <div className="relative min-h-32 flex-1 basis-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
+                  {dish.imageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={dish.imageUrl} alt="" draggable={false} className="absolute inset-0 size-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <UtensilsCrossed className="size-12 text-slate-300 dark:text-slate-600" aria-hidden />
+                    </div>
+                  )}
+                </div>
+                <h2 className="break-words text-3xl font-extrabold leading-tight tracking-tight text-emerald-800 dark:text-emerald-300 md:text-xl">{dish.name}</h2>
+                {dish.description && <p className="text-sm text-slate-500 dark:text-slate-400">{dish.description}</p>}
+                {dish.tags.length > 0 && (
+                  <ul aria-label="Recipe tags" className="flex flex-wrap gap-2">
+                    {dish.tags.map(tag => <li key={tag} className="break-words rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">{tag}</li>)}
+                  </ul>
                 )}
-              </div>
-              <h2 className="break-words text-3xl font-extrabold leading-tight tracking-tight text-emerald-800 dark:text-emerald-300 md:text-xl">{dish.name}</h2>
-              {dish.description && <p className="text-sm text-slate-500 dark:text-slate-400">{dish.description}</p>}
-              {dish.tags.length > 0 && (
-                <ul aria-label="Recipe tags" className="flex flex-wrap gap-2">
-                  {dish.tags.map(tag => <li key={tag} className="break-words rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">{tag}</li>)}
-                </ul>
-              )}
               </Link>
             </article>
           ))}

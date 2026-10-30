@@ -30,6 +30,8 @@ card. Longer titles and tags remain accessible by scrolling.
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Meals** (`/meals`) retains the weekly/monthly schedule, editing and templates.
 **Plan** (`/plan`) browses saved dishes in a horizontal photo-card carousel.
+Photos cover a positioned frame within an explicitly sized card link, avoiding
+percentage-height sizing differences in Safari's flex layout.
 Suggestions use past, non-skipped plan dates as a proxy for cooking history.
 Dishes planned in the previous 14 days appear after eligible suggestions;
 dishes scheduled for today or any future date appear last. Eligible familiar
