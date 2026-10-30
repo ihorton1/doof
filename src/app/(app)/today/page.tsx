@@ -31,7 +31,14 @@ export default async function TodayPage({
         date: { gte: rangeStart, lt: rangeEnd },
       },
       include: {
-        dish: { select: { id: true, name: true, updatedAt: true } },
+        dish: {
+          select: {
+            id: true,
+            name: true,
+            updatedAt: true,
+            tags: { include: { tag: true }, orderBy: { tag: { name: "asc" } } },
+          },
+        },
       },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     }),
@@ -59,6 +66,7 @@ export default async function TodayPage({
             id: entry.id,
             dishId: entry.dishId,
             dishName: entry.dish?.name ?? null,
+            dishTags: entry.dish?.tags.map(({ tag }) => tag.name) ?? [],
             dishImageUrl:
               entry.dish && dishIdsWithImages.has(entry.dish.id)
                 ? dishImagePath(entry.dish.id, entry.dish.updatedAt)

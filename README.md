@@ -10,6 +10,23 @@ on very short screens, the panel also scrolls to keep its controls reachable.
 On new and edit dish forms, **Save dish** stays above the bottom navigation while
 scrolling, with its position adjusted for the navigation's height and safe-area padding.
 
+Saving a new or edited dish normalizes known ingredient-unit aliases to short,
+recognizable forms: for example, `tablespoons` becomes `tbsp`, `teaspoon` becomes
+`tsp`, `grams` becomes `g`, `ounces` becomes `oz`, and `cups` becomes `cup`.
+Common British/American spellings, casing and trailing abbreviation periods are
+accepted. Descriptive or unknown units are preserved (trimmed and lowercased),
+and blank units stay empty. This also applies to imported ingredients when
+**Save dish** is used. Existing recipes are not rewritten until saved again;
+shopping lists, produce boxes and template items are not retroactively changed.
+
+The Today view uses photo-led dinner cards with inset rounded images, bold
+titles and recipe-tag pills in the existing emerald/slate palette. Swipe between
+days on mobile, or use adjacent-day cards and arrows on desktop. Day labels are
+centred above the cards in the same bold emerald typography as recipe titles,
+without a duplicate ISO date. Each meal has its own box;
+days with multiple meals use a vertical snap carousel with a peek of the next
+card. Longer titles and tags remain accessible by scrolling.
+
 ## Tech stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)

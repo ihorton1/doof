@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { normalizeIngredientUnit } from "@/lib/ingredient-unit";
 
 const ingredientSchema = z.object({
   name: z.string().min(1).max(200),
@@ -32,7 +33,7 @@ function parseDishForm(formData: FormData) {
     .map((name, i) => ({
       name: name.trim().toLowerCase(),
       quantity: (quantities[i] ?? "").trim() || null,
-      unit: (units[i] ?? "").trim().toLowerCase() || null,
+      unit: normalizeIngredientUnit(units[i] ?? ""),
       notes: null,
     }))
     .filter((ing) => ing.name.length > 0);

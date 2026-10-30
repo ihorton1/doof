@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
+const headingClassName =
+  "block text-3xl md:text-xl font-extrabold leading-tight tracking-tight text-emerald-800 dark:text-emerald-300 break-words";
+
 type Day = {
   iso: string;
   label: string;
@@ -17,6 +20,7 @@ type Day = {
     id: string;
     dishId: string | null;
     dishName: string | null;
+    dishTags: string[];
     dishImageUrl: string | null;
     freeformText: string | null;
     status: string;
@@ -99,16 +103,16 @@ function MobileCarousel({ days, focusIso }: { days: Day[]; focusIso: string }) {
   }, [focusIso]);
 
   return (
-    <div className="md:hidden flex-1 min-h-0 -mx-4">
+    <div className="md:hidden -mx-4">
       <div
         ref={scrollerRef}
-        className="h-full flex items-center gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory px-[15%] no-scrollbar"
+        className="flex items-stretch gap-4 overflow-x-auto snap-x snap-mandatory px-[7%] py-2 no-scrollbar"
       >
         {days.map((day) => (
           <div
             key={day.iso}
             ref={day.iso === focusIso ? focusRef : undefined}
-            className="snap-center shrink-0 w-[70%] h-3/4 py-1"
+            className="snap-center shrink-0 w-[86vw] h-[calc(100svh-11rem)] min-h-[26rem] max-h-[52rem]"
           >
             <DayCard day={day} emphasized={day.iso === focusIso} />
           </div>
@@ -135,11 +139,11 @@ function DesktopRow({
   const next = days[focusIdx + 1];
 
   return (
-    <div className="hidden md:flex flex-1 min-h-0">
-      <div className="flex items-center gap-4 w-full h-full">
+    <div className="hidden md:flex flex-1 min-h-0 py-2">
+      <div className="flex items-center gap-3 w-full">
         <PagerButton href={`/today?d=${prevFocusIso}`} dir="prev" />
 
-        <div className="flex-1 grid grid-cols-3 gap-4 items-stretch h-3/4">
+        <div className="min-w-0 flex-1 grid grid-cols-[1fr_1.4fr_1fr] gap-3 items-stretch h-[calc(100svh-11rem)] min-h-[26rem] max-h-[52rem]">
           {prev ? <DayCardLink day={prev} dim /> : <div />}
           <DayCard day={focus} emphasized />
           {next ? <DayCardLink day={next} dim /> : <div />}
@@ -156,7 +160,7 @@ function PagerButton({ href, dir }: { href: string; dir: "prev" | "next" }) {
     <Link
       href={href}
       aria-label={dir === "prev" ? "Previous day" : "Next day"}
-      className="self-center h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+      className="self-center shrink-0 h-10 w-10 flex items-center justify-center rounded-full border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
     >
       {dir === "prev" ? (
         <ChevronLeft className="size-5" />
@@ -172,7 +176,7 @@ function DayCardLink({ day, dim }: { day: Day; dim?: boolean }) {
     <Link
       href={`/today?d=${day.iso}`}
       className={cn(
-        "block h-full transition-opacity",
+        "block min-w-0 h-full rounded-[2rem] transition-opacity focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-500",
         dim && "opacity-60 hover:opacity-100",
       )}
     >
@@ -191,49 +195,36 @@ function DayCard({
   inLink?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "relative h-full rounded-2xl border overflow-hidden flex flex-col",
-        "bg-white dark:bg-slate-900",
-        emphasized
-          ? "border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-sm"
-          : "border-slate-200 dark:border-slate-800",
-      )}
-    >
-      <div className="relative flex flex-col h-full p-5">
-        <div className="flex items-baseline justify-between mb-3">
-          <h2
-            className={cn(
-              "font-semibold",
-              day.isToday ? "text-emerald-600 dark:text-emerald-400" : "",
-            )}
-          >
-            {day.label}
-          </h2>
-          <span
-            className={cn(
-              "text-xs",
-              "text-slate-400",
-            )}
-          >
-            {day.iso}
-          </span>
-        </div>
-
-        <div
-          className={cn(
-            "flex-1 flex flex-col",
-            day.entries.length > 0
-              ? "items-stretch justify-stretch -mx-5 -mb-5"
-              : "items-center justify-center text-center",
-          )}
-        >
-          {day.entries.length > 0 ? (
-            <PlannedMeals day={day} inLink={inLink} />
-          ) : (
-            <EmptyMeal day={day} inLink={inLink} />
-          )}
-        </div>
+    <div className="relative min-w-0 h-full flex flex-col gap-3">
+      <h2
+        className={cn(headingClassName, "shrink-0 text-center")}
+      >
+        {day.label}
+      </h2>
+      <div
+        tabIndex={day.entries.length > 0 && !inLink ? 0 : undefined}
+        role={day.entries.length > 0 ? "region" : undefined}
+        aria-label={day.entries.length > 0 ? `${day.label} meals` : undefined}
+        className={cn(
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain no-scrollbar focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-emerald-500",
+          day.entries.length > 0
+            ? "grid gap-4 snap-y snap-proximity rounded-[2rem]"
+            : cn(
+                "flex items-center justify-center text-center rounded-[2rem] border bg-white dark:bg-slate-900",
+                emphasized
+                  ? "border-emerald-500/40 shadow-sm"
+                  : "border-slate-200 dark:border-slate-800",
+              ),
+          day.entries.length > 1
+            ? "auto-rows-[minmax(90%,auto)]"
+            : "auto-rows-[minmax(100%,auto)]",
+        )}
+      >
+        {day.entries.length > 0 ? (
+          <PlannedMeals day={day} inLink={inLink} emphasized={emphasized} />
+        ) : (
+          <EmptyMeal day={day} inLink={inLink} />
+        )}
       </div>
     </div>
   );
@@ -242,21 +233,18 @@ function DayCard({
 function PlannedMeals({
   day,
   inLink,
+  emphasized,
 }: {
   day: Day;
   inLink?: boolean;
+  emphasized?: boolean;
 }) {
   return (
-    <div
-      className="grid h-full min-h-0 w-full"
-      style={{
-        gridTemplateRows: `repeat(${day.entries.length}, minmax(0, 1fr))`,
-      }}
-    >
+    <>
       {day.entries.map((entry) => {
         const title = entry.dishName ?? entry.freeformText ?? "—";
         const titleClassName = cn(
-          "text-lg font-medium leading-tight text-white drop-shadow-sm",
+          headingClassName,
           entry.status === "skipped" && "line-through opacity-60",
         );
         const titleNode =
@@ -272,30 +260,47 @@ function PlannedMeals({
           );
 
         return (
-          <div
+          <article
             key={entry.id}
-            className="relative min-h-0 overflow-hidden border-t border-white/20 bg-slate-800"
-          >
-            {entry.dishImageUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={entry.dishImageUrl}
-                alt=""
-                className="absolute inset-0 size-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-700">
-                <UtensilsCrossed className="size-10 text-white/40" />
-              </div>
+            aria-label={title}
+            className={cn(
+              "flex min-w-0 flex-col gap-4 snap-start rounded-[2rem] border bg-white p-5 dark:bg-slate-900 md:p-3",
+              emphasized
+                ? "border-emerald-500/40 shadow-sm"
+                : "border-slate-200 dark:border-slate-800",
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/10" />
-            <div className="relative flex h-full items-end p-5">
-              {titleNode}
+          >
+            <div className="min-h-24 flex-1 basis-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
+              {entry.dishImageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={entry.dishImageUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center">
+                  <UtensilsCrossed className="size-12 text-slate-300 dark:text-slate-600" aria-hidden />
+                </div>
+              )}
             </div>
-          </div>
+            <h3>{titleNode}</h3>
+            {entry.dishTags.length > 0 && (
+              <ul aria-label="Recipe tags" className="flex flex-wrap gap-2 pb-1">
+                {entry.dishTags.map((tag) => (
+                  <li
+                    key={tag}
+                    className="max-w-full break-words rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 md:px-3 md:py-1.5 md:text-xs"
+                  >
+                    {tag}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
         );
       })}
-    </div>
+    </>
   );
 }
 
