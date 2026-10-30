@@ -29,6 +29,9 @@ card. Longer titles and tags remain accessible by scrolling.
 
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Meals** (`/meals`) retains the weekly/monthly schedule, editing and templates.
+In the Meals dish editor, selected dishes appear as removable chips above search
+and remain available to deselect even when the search hides their result rows.
+The popup heading shows only the date, without the meal-slot label.
 **Plan** (`/plan`) browses saved dishes in a horizontal photo-card carousel.
 Photos cover a positioned frame within an explicitly sized card link, avoiding
 percentage-height sizing differences in Safari's flex layout.
@@ -68,6 +71,8 @@ Quick tagging and the dish editor share a custom autocomplete dropdown with up t
 eight matching existing tags and an option to create a new tag. Use touch/click
 or Up/Down and Enter to select a suggestion; in the quick popup, **Add tag** then
 saves it. Suggestions exclude tags already assigned to the recipe.
+Suggestion presses keep input focus until selection so clicking a full tag does
+not commit the typed prefix as a separate tag.
 In the day picker, scroll, tap a date, or use
 the arrow keys, Home/End and Page Up/Down, then confirm **Add to ...**.
 This adds dinner without replacing existing meals or freeform notes; adding the

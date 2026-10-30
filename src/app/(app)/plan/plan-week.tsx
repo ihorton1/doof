@@ -261,6 +261,7 @@ function EditModal({
   const filtered = dishes.filter((r) =>
     r.name.toLowerCase().includes(filter.toLowerCase()),
   );
+  const selectedDishes = dishes.filter((dish) => dishIds.has(dish.id));
 
   return (
     <div
@@ -277,7 +278,7 @@ function EditModal({
       >
         <div className="flex shrink-0 items-center justify-between">
           <h2 id="plan-dishes-title" className="font-semibold">
-            {date} · <span className="capitalize">{slot}</span>
+            {date}
           </h2>
           <button
             type="button"
@@ -288,6 +289,29 @@ function EditModal({
             <X className="size-4" />
           </button>
         </div>
+
+        {selectedDishes.length > 0 && (
+          <ul aria-label="Selected dishes" className="flex max-h-32 shrink-0 flex-wrap gap-2 overflow-y-auto overscroll-contain">
+            {selectedDishes.map((dish) => (
+              <li key={dish.id} className="min-w-0 max-w-full">
+                <button
+                  type="button"
+                  aria-label={`Remove ${dish.name}`}
+                  disabled={isPending}
+                  onClick={() => setDishIds((selected) => {
+                    const next = new Set(selected);
+                    next.delete(dish.id);
+                    return next;
+                  })}
+                  className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-emerald-100 px-3 py-2 text-sm font-medium text-emerald-800 disabled:opacity-50 dark:bg-emerald-900 dark:text-emerald-200"
+                >
+                  <span className="min-w-0 break-words">{dish.name}</span>
+                  <X aria-hidden className="size-4 shrink-0" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <input
           value={filter}

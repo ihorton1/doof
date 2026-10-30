@@ -110,6 +110,7 @@ export function TagAutocomplete({
               aria-selected={active === index}
               tabIndex={-1}
               onPointerDown={(event) => event.preventDefault()}
+              onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(option.value)}
               className={cn(
                 "block w-full break-words px-3 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800",

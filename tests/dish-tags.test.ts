@@ -66,6 +66,15 @@ test("tag autocomplete matches substrings, excludes assigned tags, and offers cr
   assert.equal(options.length, 9);
 });
 
+test("multiword tag suggestions retain their full value when matched by a prefix", () => {
+  const options = getTagOptions("lyse", ["lyse friendly"], []);
+  assert.deepEqual(options, [
+    { value: "lyse friendly", create: false },
+    { value: "lyse", create: true },
+  ]);
+  assert.equal(normalizeTag(options[0].value), "lyse friendly");
+});
+
 test("the dish editor uses the same accessible tag autocomplete and preserves saved tag inputs", () => {
   const html = renderToStaticMarkup(createElement(TagPicker, {
     initial: ["quick"], suggestions: ["quick", "weeknight"],
