@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition, type MouseEvent } from "react";
-import { UtensilsCrossed, X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
+import { Search, UtensilsCrossed, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getDishSearchSuggestions } from "@/lib/dish-search";
+import { filterPlanDishes } from "@/lib/plan-dish-filters";
 import { getPlanningDays, type ChooseDishAction } from "@/lib/planning-days";
+import { type AddDishTagAction } from "@/lib/dish-tags";
+import { createRecipeClicks } from "@/lib/recipe-clicks";
+import { QuickTagPicker } from "./quick-tag-picker";
 
 export type SavedDish = {
   id: string;
@@ -13,23 +18,82 @@ export type SavedDish = {
   description: string | null;
   imageUrl: string | null;
   tags: string[];
+  ingredientNames: string[];
 };
 
 type RecipeCarouselProps = {
   dishes: SavedDish[];
   todayIso: string;
   addDishAction: ChooseDishAction;
+  addTagAction: AddDishTagAction;
+  tagSuggestions: string[];
 };
 
-export function RecipeCarousel({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
+export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, tagSuggestions }: RecipeCarouselProps) {
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [queries, setQueries] = useState<string[]>([]);
+  const [filterError, setFilterError] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  const suggestionsId = useId();
+  const errorId = useId();
+  const suggestions = useMemo(() => getDishSearchSuggestions(dishes), [dishes]);
   const tags = [...new Set(dishes.flatMap(dish => dish.tags))]
     .sort((a, b) => a.localeCompare(b));
-  const filtered = activeTag ? dishes.filter(dish => dish.tags.includes(activeTag)) : dishes;
+  const filtered = filterPlanDishes(dishes, activeTag, queries);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <h1 className="text-center text-3xl font-extrabold tracking-tight text-emerald-800 dark:text-emerald-300">Plan</h1>
+      {dishes.length > 0 && (
+        <form
+          aria-label="Add recipe filter"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = query.trim();
+            if (!value) {
+              setFilterError("Enter a dish, ingredient or tag.");
+              return;
+            }
+            if (queries.some(existing => existing.toLocaleLowerCase() === value.toLocaleLowerCase())) {
+              setFilterError("That filter is already added.");
+              return;
+            }
+            setQueries(current => [...current, value]);
+            setQuery("");
+            setFilterError("");
+            input.current?.focus();
+          }}
+          className="space-y-2"
+        >
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <input
+                ref={input}
+                type="search"
+                required
+                value={query}
+                onChange={(event) => { setQuery(event.target.value); setFilterError(""); }}
+                placeholder="Filter by dish, ingredient or tag..."
+                aria-label="Filter by dish, ingredient or tag"
+                aria-invalid={Boolean(filterError)}
+                aria-describedby={filterError ? errorId : undefined}
+                list={query ? suggestionsId : undefined}
+                autoComplete="off"
+                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+              />
+              <datalist id={suggestionsId}>
+                {suggestions.map(value => <option key={value} value={value} />)}
+              </datalist>
+            </div>
+            <button type="submit" disabled={!query.trim()} className="min-h-11 shrink-0 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+              Add filter
+            </button>
+          </div>
+          {filterError && <p id={errorId} role="alert" className="text-sm text-red-600 dark:text-red-400">{filterError}</p>}
+        </form>
+      )}
       {tags.length > 0 && (
         <div role="group" aria-label="Filter recipes by tag" className="flex flex-wrap justify-center gap-2">
           {tags.map(tag => (
@@ -50,27 +114,70 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction }: RecipeCarous
           ))}
         </div>
       )}
-      <RecipeCards key={activeTag === null ? "all" : `tag:${activeTag}`} dishes={filtered} todayIso={todayIso} addDishAction={addDishAction} />
+      {(queries.length > 0 || activeTag !== null) && (
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {queries.length > 0 && (
+            <ul aria-label="Ad hoc filters" className="flex min-w-0 flex-wrap justify-center gap-2">
+              {queries.map(value => (
+                <li key={value} className="min-w-0 max-w-full">
+                  <button
+                    type="button"
+                    aria-label={`Remove filter ${value}`}
+                    onClick={() => {
+                      setQueries(current => current.filter(query => query !== value));
+                      setFilterError("");
+                      input.current?.focus();
+                    }}
+                    className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
+                  >
+                    <span className="min-w-0 break-words">{value}</span>
+                    <X aria-hidden className="size-3 shrink-0" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTag(null);
+              setQueries([]);
+              setQuery("");
+              setFilterError("");
+              input.current?.focus();
+            }}
+            className="min-h-9 px-2 text-xs text-slate-500 underline dark:text-slate-400"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+      {dishes.length > 0 && filtered.length === 0 ? (
+        <p role="status" className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-slate-700">
+          No recipes match these filters.
+        </p>
+      ) : (
+        <RecipeCards key={JSON.stringify([activeTag, queries])} dishes={filtered} todayIso={todayIso} addDishAction={addDishAction} addTagAction={addTagAction} tagSuggestions={tagSuggestions} />
+      )}
     </div>
   );
 }
 
-function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
+function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggestions }: RecipeCarouselProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [active, setActive] = useState(0);
   const [selected, setSelected] = useState<SavedDish | null>(null);
+  const [tagging, setTagging] = useState<SavedDish | null>(null);
   const [message, setMessage] = useState("");
-  const pendingClick = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const clicks = useMemo(() => createRecipeClicks<SavedDish>({
+    single: dish => router.push(`/dishes/${dish.id}`),
+    double: setSelected,
+    triple: setTagging,
+  }), [router]);
+  const cancelClick = clicks.cancel;
 
-  useEffect(() => () => {
-    if (pendingClick.current) clearTimeout(pendingClick.current.timer);
-  }, []);
-
-  function cancelClick() {
-    if (pendingClick.current) clearTimeout(pendingClick.current.timer);
-    pendingClick.current = null;
-  }
+  useEffect(() => () => clicks.cancel(), [clicks]);
 
   function openRecipe(event: MouseEvent<HTMLAnchorElement>, dish: SavedDish) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.detail === 0) {
@@ -78,19 +185,7 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
       return;
     }
     event.preventDefault();
-    if (pendingClick.current?.id === dish.id) {
-      cancelClick();
-      setSelected(dish);
-    } else {
-      cancelClick();
-      pendingClick.current = {
-        id: dish.id,
-        timer: setTimeout(() => {
-          pendingClick.current = null;
-          router.push(`/dishes/${dish.id}`);
-        }, 400),
-      };
-    }
+    clicks.click(dish);
   }
 
   function navigate(index: number) {
@@ -116,7 +211,7 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <p id="recipe-carousel-help" className="sr-only">
-        Keyboard: Enter views the recipe; Space chooses a day.
+        Keyboard: Enter views the recipe; Space chooses a day; T adds a tag.
       </p>
       <p role="status" className="text-center text-sm text-emerald-700 empty:hidden dark:text-emerald-300">{message}</p>
       <div className="-mx-4">
@@ -135,6 +230,7 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
             }
           }}
           onScroll={() => {
+            cancelClick();
             const el = scroller.current;
             if (!el) return;
             const center = el.scrollLeft + el.clientWidth / 2;
@@ -147,13 +243,15 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
             });
             setActive(closest);
           }}
-          className="relative flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-[7%] py-2 no-scrollbar focus-visible:outline-2 focus-visible:outline-slate-400"
+          className="relative flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-[7%] py-2 no-scrollbar focus-visible:outline-none focus-visible:[&_[data-active=true]_h2]:underline"
         >
           {dishes.map((dish, index) => (
             <article
               key={dish.id}
               aria-label={dish.name}
               aria-roledescription="slide"
+              data-active={index === active}
+              onScroll={cancelClick}
               className={cn(
                 "h-[calc(100svh-17rem)] min-h-[25rem] max-h-[48rem] w-full shrink-0 snap-center overflow-y-auto rounded-[2rem] border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900",
                 index === active && "shadow-sm",
@@ -163,18 +261,20 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
                 href={`/dishes/${dish.id}`}
                 aria-label={dish.name}
                 aria-describedby="recipe-carousel-help"
-                aria-keyshortcuts="Space"
+                aria-keyshortcuts="Space t"
                 onClick={(event) => openRecipe(event, dish)}
                 onPointerCancel={cancelClick}
-                onDragStart={(event) => event.preventDefault()}
+                onDragStart={(event) => { event.preventDefault(); cancelClick(); }}
                 onKeyDown={(event) => {
-                  if (event.key === " ") {
+                  if (event.altKey || event.ctrlKey || event.metaKey) return;
+                  if (event.key === " " || event.key.toLowerCase() === "t") {
                     event.preventDefault();
                     cancelClick();
-                    setSelected(dish);
+                    if (event.key === " ") setSelected(dish);
+                    else setTagging(dish);
                   }
                 }}
-                className="flex h-full touch-manipulation select-none flex-col gap-4 rounded-[2rem] p-5 focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-slate-400"
+                className="flex h-full touch-manipulation select-none flex-col gap-4 rounded-[2rem] p-5 focus-visible:outline-none focus-visible:[&_h2]:underline"
               >
                 <div className="relative min-h-32 flex-1 basis-0 overflow-hidden rounded-[1.25rem] bg-slate-100 dark:bg-slate-800">
                   {dish.imageUrl ? (
@@ -208,6 +308,19 @@ function RecipeCards({ dishes, todayIso, addDishAction }: RecipeCarouselProps) {
           onAdded={(label, duplicate) => {
             setMessage(`${selected.name} ${duplicate ? "is already planned" : "added"} for ${label.toLowerCase()}.`);
             setSelected(null);
+          }}
+        />
+      )}
+      {tagging && (
+        <QuickTagPicker
+          key={tagging.id}
+          dish={tagging}
+          suggestions={tagSuggestions}
+          addTagAction={addTagAction}
+          onClose={() => setTagging(null)}
+          onAdded={(tag, duplicate) => {
+            setMessage(`${tagging.name} ${duplicate ? "already has" : "tagged with"} "${tag}".`);
+            setTagging(null);
           }}
         />
       )}

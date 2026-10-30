@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { X } from "lucide-react";
+import { normalizeTag } from "@/lib/dish-tags";
 
 export function TagPicker({
   initial,
@@ -17,7 +18,7 @@ export function TagPicker({
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function add(raw: string) {
-    const cleaned = raw.trim().toLowerCase().slice(0, 40);
+    const cleaned = normalizeTag(raw);
     if (!cleaned) return;
     setTags((prev) => (prev.includes(cleaned) ? prev : [...prev, cleaned]));
     setInput("");

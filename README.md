@@ -32,6 +32,7 @@ The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Plan** (`/plan`) browses saved dishes in a horizontal photo-card carousel.
 Photos cover a positioned frame within an explicitly sized card link, avoiding
 percentage-height sizing differences in Safari's flex layout.
+Keyboard focus underlines the recipe title instead of outlining the card edges.
 Suggestions use past, non-skipped plan dates as a proxy for cooking history.
 Dishes planned in the previous 14 days appear after eligible suggestions;
 dishes scheduled for today or any future date appear last. Eligible familiar
@@ -43,12 +44,26 @@ throughout the day. Cooldown dishes are oldest-planned first. Every saved dish
 remains accessible; short pools are filled from the remaining recipes.
 Tag chips above the carousel filter recipes by a single tag. Tapping the
 selected tag again clears the filter. Changing tags starts at the first
-matching recipe and cancels any pending single-tap navigation. Filtering keeps
+matching recipe and cancels any pending single-tap navigation.
+The search field adds temporary, removable filter chips with **Add filter** or
+Enter. Each chip matches dish names, ingredients or tags, ignoring case and
+surrounding whitespace and allowing substring matches. Recipes must match every
+chip and the selected tag. Suggestions cover all three fields; duplicate chips
+are rejected. Remove individual chips or use **Clear filters** to clear both
+chips and the selected tag. These filters do not change saved recipe tags.
+Changing chips also resets the carousel and cancels pending navigation. Filtering keeps
 the recommendation order; it does not rerank or reshuffle recipes.
 Tap a card to view its recipe; double-tap (double-click with a mouse) to open a
-scrolling picker covering Today and the next 29 days. Single-tap navigation waits
-400 ms to distinguish it from a double-tap. Keyboard users can focus a card and
-press Enter to view the recipe or Space to choose a day. Scroll, tap a date, or use
+scrolling picker covering Today and the next 29 days. Triple-tap opens a compact
+quick-tag popup with existing-tag suggestions. Single-tap navigation waits
+400 ms; the day picker waits 400 ms after the second tap to distinguish a triple-tap.
+Scrolling, cancelling the pointer, changing filters or using a keyboard shortcut
+cancels a pending gesture. Keyboard users can focus a card and press Enter to view
+the recipe, Space to choose a day, or T to add a tag. Quick tags are saved on the
+recipe without replacing existing tags, using the same lowercase, trimmed names
+as the dish editor (up to 40 characters). Repeating an existing tag is a no-op with
+explicit feedback; saved tags update the carousel and its filter/suggestion lists.
+In the day picker, scroll, tap a date, or use
 the arrow keys, Home/End and Page Up/Down, then confirm **Add to ...**.
 This adds dinner without replacing existing meals or freeform notes; adding the
 same dish to the same day again is a no-op with an explicit confirmation.

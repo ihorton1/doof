@@ -1,4 +1,4 @@
-type SearchableDish = {
+export type SearchableDish = {
   name: string;
   ingredientNames: string[];
   tags: string[];

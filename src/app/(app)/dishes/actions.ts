@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { normalizeIngredientUnit } from "@/lib/ingredient-unit";
+import { normalizeTag } from "@/lib/dish-tags";
 
 const ingredientSchema = z.object({
   name: z.string().min(1).max(200),
@@ -41,7 +42,7 @@ function parseDishForm(formData: FormData) {
   const rawTags = formData.getAll("tag").map(String);
   const tagSet = new Set<string>();
   for (const t of rawTags) {
-    const cleaned = t.trim().toLowerCase().slice(0, 40);
+    const cleaned = normalizeTag(t);
     if (cleaned) tagSet.add(cleaned);
   }
   const tags = Array.from(tagSet);

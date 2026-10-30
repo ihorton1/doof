@@ -8,12 +8,15 @@ import { RecipeCarousel, type SavedDish } from "../src/app/(app)/plan/recipe-car
 const dish: SavedDish = {
   id: "dish-1", name: "Chilli eggs", description: "A quick dinner",
   imageUrl: "/api/dishes/dish-1/image", tags: ["quick", "vegetarian"],
+  ingredientNames: ["eggs", "chilli flakes"],
 };
 
 function render(dishes: SavedDish[]) {
   const carousel = createElement(RecipeCarousel, {
     dishes, todayIso: "2026-10-30",
     addDishAction: async () => ({ status: "added" } as const),
+    addTagAction: async ({ tag }) => ({ status: "added", tag } as const),
+    tagSuggestions: ["quick", "vegetarian"],
   });
   return renderToStaticMarkup(createElement(AppRouterContext.Provider, {
     value: {
@@ -32,8 +35,9 @@ test("saved dishes render as snap carousel cards with accessible alternatives to
   assert.match(html, /aria-label="Recipe tags"/);
   assert.match(html, /href="\/dishes\/dish-1"/);
   assert.doesNotMatch(html, />Choose day<\/button>|>View recipe<\/a>/);
-  assert.equal((html.match(/aria-keyshortcuts="Space"/g) ?? []).length, 2);
+  assert.equal((html.match(/aria-keyshortcuts="Space t"/g) ?? []).length, 2);
   assert.match(html, /Enter views the recipe; Space chooses a day/);
+  assert.match(html, /T adds a tag/);
   assert.doesNotMatch(html, /aria-label="(?:Previous|Next) recipe"/);
   assert.doesNotMatch(html, />1<!-- --> \/ /);
   assert.doesNotMatch(html, /border-emerald|outline-emerald/);
@@ -56,6 +60,15 @@ test("recipe photos fill a positioned frame inside an explicitly sized card link
   assert.match(placeholder, /class="absolute inset-0 flex items-center justify-center"/);
 });
 
+test("carousel keyboard focus underlines titles instead of outlining card edges", () => {
+  const html = render([dish, { ...dish, id: "dish-2", name: "Soup" }]);
+  assert.doesNotMatch(html, /focus-visible:outline-(?:2|inset|slate-400)/);
+  assert.match(html, /focus-visible:outline-none focus-visible:\[&amp;_h2\]:underline/);
+  assert.match(html, /focus-visible:\[&amp;_\[data-active=true\]_h2\]:underline/);
+  assert.equal((html.match(/data-active="true"/g) ?? []).length, 1);
+  assert.equal((html.match(/data-active="false"/g) ?? []).length, 1);
+});
+
 test("Plan offers available tags once, alphabetically, with no tag selected initially", () => {
   const html = render([dish, { ...dish, id: "dish-2", tags: ["quick", "weeknight"] }]);
   assert.match(html, /aria-label="Filter recipes by tag"/);
@@ -70,4 +83,17 @@ test("Plan offers available tags once, alphabetically, with no tag selected init
 test("Plan does not show empty tag controls when no recipes have tags", () => {
   assert.doesNotMatch(render([{ ...dish, tags: [] }]), /aria-label="Filter recipes by tag"/);
   assert.doesNotMatch(render([]), /aria-label="Filter recipes by tag"/);
+});
+
+test("Plan offers an ad hoc filter form with title, ingredient and tag suggestions", () => {
+  const html = render([dish]);
+  assert.match(html, /aria-label="Add recipe filter"/);
+  assert.match(html, /aria-label="Filter by dish, ingredient or tag"/);
+  assert.match(html, />Add filter<\/button>/);
+  for (const value of ["Chilli eggs", "eggs", "chilli flakes", "quick", "vegetarian"]) {
+    assert.ok(html.includes(`<option value="${value}"`), value);
+  }
+  assert.doesNotMatch(html, /aria-label="Ad hoc filters"/);
+  assert.doesNotMatch(html, />Clear filters<\/button>/);
+  assert.doesNotMatch(render([]), /aria-label="Add recipe filter"/);
 });
