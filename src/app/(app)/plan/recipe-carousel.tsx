@@ -169,7 +169,7 @@ function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggest
   const [active, setActive] = useState(0);
   const [selected, setSelected] = useState<SavedDish | null>(null);
   const [tagging, setTagging] = useState<SavedDish | null>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState({ text: "", screenReaderOnly: false });
   const clicks = useMemo(() => createRecipeClicks<SavedDish>({
     single: dish => router.push(`/dishes/${dish.id}`),
     double: setSelected,
@@ -213,7 +213,7 @@ function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggest
       <p id="recipe-carousel-help" className="sr-only">
         Keyboard: Enter views the recipe; Space chooses a day; T adds a tag.
       </p>
-      <p role="status" className="text-center text-sm text-emerald-700 empty:hidden dark:text-emerald-300">{message}</p>
+      <p role="status" className={message.screenReaderOnly ? "sr-only" : "text-center text-sm text-emerald-700 empty:hidden dark:text-emerald-300"}>{message.text}</p>
       <div className="-mx-4">
         <div
           ref={scroller}
@@ -306,7 +306,10 @@ function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggest
           addDishAction={addDishAction}
           onClose={() => setSelected(null)}
           onAdded={(label, duplicate) => {
-            setMessage(`${selected.name} ${duplicate ? "is already planned" : "added"} for ${label.toLowerCase()}.`);
+            setMessage({
+              text: `${selected.name} ${duplicate ? "is already planned" : "added"} for ${label.toLowerCase()}.`,
+              screenReaderOnly: false,
+            });
             setSelected(null);
           }}
         />
@@ -319,7 +322,10 @@ function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggest
           addTagAction={addTagAction}
           onClose={() => setTagging(null)}
           onAdded={(tag, duplicate) => {
-            setMessage(`${tagging.name} ${duplicate ? "already has" : "tagged with"} "${tag}".`);
+            setMessage({
+              text: `${tagging.name} ${duplicate ? "already has" : "tagged with"} "${tag}".`,
+              screenReaderOnly: true,
+            });
             setTagging(null);
           }}
         />

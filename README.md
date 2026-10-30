@@ -61,8 +61,13 @@ Scrolling, cancelling the pointer, changing filters or using a keyboard shortcut
 cancels a pending gesture. Keyboard users can focus a card and press Enter to view
 the recipe, Space to choose a day, or T to add a tag. Quick tags are saved on the
 recipe without replacing existing tags, using the same lowercase, trimmed names
-as the dish editor (up to 40 characters). Repeating an existing tag is a no-op with
-explicit feedback; saved tags update the carousel and its filter/suggestion lists.
+as the dish editor (up to 40 characters). Repeating an existing tag is a no-op.
+Tag confirmations are announced to screen readers without visible status text;
+saved tags update the carousel and its filter/suggestion lists. Errors remain visible.
+Quick tagging and the dish editor share a custom autocomplete dropdown with up to
+eight matching existing tags and an option to create a new tag. Use touch/click
+or Up/Down and Enter to select a suggestion; in the quick popup, **Add tag** then
+saves it. Suggestions exclude tags already assigned to the recipe.
 In the day picker, scroll, tap a date, or use
 the arrow keys, Home/End and Page Up/Down, then confirm **Add to ...**.
 This adds dinner without replacing existing meals or freeform notes; adding the

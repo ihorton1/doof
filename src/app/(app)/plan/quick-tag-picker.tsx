@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { X } from "lucide-react";
 import { dishTagSchema, MAX_TAG_LENGTH, type AddDishTagAction } from "@/lib/dish-tags";
+import { TagAutocomplete } from "@/components/tag-autocomplete";
 
 export function QuickTagPicker({ dish, suggestions, addTagAction, onClose, onAdded }: {
   dish: { id: string; name: string; tags: string[] };
@@ -16,7 +17,6 @@ export function QuickTagPicker({ dish, suggestions, addTagAction, onClose, onAdd
   const [pending, startTransition] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const suggestionsId = useId();
   const errorId = useId();
 
   useEffect(() => {
@@ -68,24 +68,23 @@ export function QuickTagPicker({ dish, suggestions, addTagAction, onClose, onAdd
         }}
         className="space-y-3"
       >
-        <input
-          ref={input}
+        <TagAutocomplete
+          inputRef={input}
+          suggestions={suggestions}
+          selected={dish.tags}
+          inlineSuggestions
           aria-label="Tag name"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
           value={name}
-          onChange={(event) => { setName(event.target.value); setError(""); }}
+          onChange={(value) => { setName(value); setError(""); }}
+          onSelect={(value) => { setName(value); setError(""); input.current?.focus(); }}
           required
           maxLength={MAX_TAG_LENGTH}
           disabled={pending}
-          list={suggestionsId}
-          autoComplete="off"
           placeholder="Add a tag..."
           className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
         />
-        <datalist id={suggestionsId}>
-          {suggestions.filter(tag => !dish.tags.includes(tag)).map(tag => <option key={tag} value={tag} />)}
-        </datalist>
         {error && <p id={errorId} role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <button type="submit" disabled={pending || !name.trim()} className="min-h-11 w-full rounded-xl bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
           {pending ? "Adding..." : "Add tag"}
