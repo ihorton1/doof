@@ -161,9 +161,10 @@ export function DishForm({
         </Field>
       </div>
 
-      <Field label="Tags">
+      <fieldset className="min-w-0">
+        <legend className="text-sm font-medium mb-1">Tags</legend>
         <TagPicker initial={initial?.tags ?? []} suggestions={suggestions?.tags ?? []} />
-      </Field>
+      </fieldset>
 
       <div>
         <label className="text-sm font-medium block mb-2">Ingredients</label>

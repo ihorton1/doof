@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { dishTagSchema, getTagOptions, MAX_TAG_LENGTH, normalizeTag } from "../src/lib/dish-tags";
 import { TagPicker } from "../src/app/(app)/dishes/tag-picker";
 import { QuickTagPicker } from "../src/app/(app)/plan/quick-tag-picker";
+import { DishForm } from "../src/app/(app)/dishes/dish-form";
 
 test("tag normalization preserves the dish editor's trimmed lowercase 40-character convention", () => {
   assert.equal(MAX_TAG_LENGTH, 40);
@@ -84,4 +85,18 @@ test("the dish editor uses the same accessible tag autocomplete and preserves sa
   assert.match(html, /role="combobox"/);
   assert.match(html, /aria-autocomplete="list"/);
   assert.match(html, /aria-label="Add tags"/);
+});
+
+test("the dish form groups tag controls without a wrapping label that can activate Remove", () => {
+  const html = renderToStaticMarkup(createElement(DishForm, {
+    action: async () => {},
+    initial: { name: "Smashed Beef Kebab", tags: ["nytimes", "lyse friendly"] },
+    suggestions: { names: [], units: [], tags: ["nytimes", "lyse friendly"] },
+  }));
+  const fieldset = html.match(/<fieldset\b[^>]*>[\s\S]*?<\/fieldset>/)?.[0] ?? "";
+  assert.match(fieldset, /<legend[^>]*>Tags<\/legend>/);
+  assert.match(fieldset, /aria-label="Add tags"/);
+  assert.match(fieldset, /name="tag" value="nytimes"/);
+  assert.match(fieldset, /aria-label="Remove nytimes"/);
+  assert.doesNotMatch(fieldset, /<label\b/);
 });

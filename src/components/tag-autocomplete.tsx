@@ -97,7 +97,7 @@ export function TagAutocomplete({
           role="listbox"
           aria-label="Tag suggestions"
           className={cn(
-            "z-10 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900",
+            "z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900",
             !inlineSuggestions && "absolute inset-x-0",
           )}
         >
@@ -109,7 +109,9 @@ export function TagAutocomplete({
               role="option"
               aria-selected={active === index}
               tabIndex={-1}
-              onPointerDown={(event) => event.preventDefault()}
+              onPointerDown={(event) => {
+                if (event.pointerType === "mouse") event.preventDefault();
+              }}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(option.value)}
               className={cn(

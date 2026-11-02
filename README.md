@@ -97,6 +97,10 @@ or Up/Down and Enter to select a suggestion; in the quick popup, **Add tag** the
 saves it. Suggestions exclude tags already assigned to the recipe.
 Suggestion presses keep input focus until selection so clicking a full tag does
 not commit the typed prefix as a separate tag.
+Touch presses remain uncancelled so Safari can deliver selection clicks, and
+suggestions appear above the sticky Save dish controls. The editor groups tags
+in a fieldset rather than a wrapping label, preventing Safari from immediately
+activating a newly added tag's Remove button.
 In the day picker, scroll, tap a date, or use
 the arrow keys, Home/End and Page Up/Down, then confirm **Add to ...**.
 This adds dinner without replacing existing meals or freeform notes; adding the
