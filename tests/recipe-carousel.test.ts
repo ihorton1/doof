@@ -72,8 +72,8 @@ test("carousel keyboard focus underlines titles instead of outlining card edges"
 test("Plan offers available tags once, alphabetically, with no tag selected initially", () => {
   const html = render([dish, { ...dish, id: "dish-2", tags: ["quick", "weeknight"] }]);
   assert.match(html, /aria-label="Filter recipes by tag"/);
-  const buttons = [...html.matchAll(/<button[^>]*aria-pressed="(true|false)"[^>]*>([^<]+)<\/button>/g)];
-  assert.deepEqual(buttons.map(([, pressed, label]) => ({ pressed, label })), [
+  const buttons = [...html.matchAll(/<button[^>]*aria-label="([^"]*)"[^>]*aria-pressed="(true|false)"[^>]*>/g)];
+  assert.deepEqual(buttons.map(([, label, pressed]) => ({ pressed, label })), [
     { pressed: "false", label: "quick" },
     { pressed: "false", label: "vegetarian" },
     { pressed: "false", label: "weeknight" },
@@ -96,4 +96,6 @@ test("Plan offers an ad hoc filter form with title, ingredient and tag suggestio
   assert.doesNotMatch(html, /aria-label="Ad hoc filters"/);
   assert.doesNotMatch(html, />Clear filters<\/button>/);
   assert.doesNotMatch(render([]), /aria-label="Add recipe filter"/);
+  assert.match(html, /All filters use AND/);
+  assert.match(html, /Double-tap\/click a bubble to exclude/);
 });

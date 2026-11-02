@@ -176,7 +176,7 @@ export function IngredientImporter({
           )}
           <div className="space-y-3">
             <p className="text-xs text-slate-500">
-              Review the suggested fields, or select words to correct them. Swipe left or use Remove to omit a line; Undo restores it.
+              Review the suggested fields, or select words to correct them. Use the trash can to omit a line; Undo restores it.
             </p>
             {currentDrafts.map((draft, index) => draft.dismissed ? (
               <div key={`${previewVersion}-${selected}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-slate-300 p-3 text-sm dark:border-slate-700">

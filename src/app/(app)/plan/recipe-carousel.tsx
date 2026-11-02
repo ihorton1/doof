@@ -6,11 +6,12 @@ import { useEffect, useId, useMemo, useRef, useState, useTransition, type MouseE
 import { Search, UtensilsCrossed, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDishSearchSuggestions } from "@/lib/dish-search";
-import { filterPlanDishes } from "@/lib/plan-dish-filters";
+import { filterPlanDishes, type PlanFilter } from "@/lib/plan-dish-filters";
 import { getPlanningDays, type ChooseDishAction } from "@/lib/planning-days";
 import { type AddDishTagAction } from "@/lib/dish-tags";
 import { createRecipeClicks } from "@/lib/recipe-clicks";
 import { QuickTagPicker } from "./quick-tag-picker";
+import { FilterBubble } from "./filter-bubble";
 
 export type SavedDish = {
   id: string;
@@ -30,9 +31,10 @@ type RecipeCarouselProps = {
 };
 
 export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, tagSuggestions }: RecipeCarouselProps) {
-  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [tagFilters, setTagFilters] = useState<PlanFilter[]>([]);
   const [query, setQuery] = useState("");
-  const [queries, setQueries] = useState<string[]>([]);
+  const [queries, setQueries] = useState<PlanFilter[]>([]);
+  const [filterResetVersion, setFilterResetVersion] = useState(0);
   const [filterError, setFilterError] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const suggestionsId = useId();
@@ -40,7 +42,13 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
   const suggestions = useMemo(() => getDishSearchSuggestions(dishes), [dishes]);
   const tags = [...new Set(dishes.flatMap(dish => dish.tags))]
     .sort((a, b) => a.localeCompare(b));
-  const filtered = filterPlanDishes(dishes, activeTag, queries);
+  const filtered = filterPlanDishes(dishes, tagFilters, queries);
+
+  function excludeFilter(current: PlanFilter[], value: string): PlanFilter[] {
+    return current.some(filter => filter.value === value)
+      ? current.map(filter => filter.value === value ? { ...filter, exclude: true } : filter)
+      : [...current, { value, exclude: true }];
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -55,11 +63,11 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
               setFilterError("Enter a dish, ingredient or tag.");
               return;
             }
-            if (queries.some(existing => existing.toLocaleLowerCase() === value.toLocaleLowerCase())) {
+            if (queries.some(existing => existing.value.toLocaleLowerCase() === value.toLocaleLowerCase())) {
               setFilterError("That filter is already added.");
               return;
             }
-            setQueries(current => [...current, value]);
+            setQueries(current => [...current, { value, exclude: false }]);
             setQuery("");
             setFilterError("");
             input.current?.focus();
@@ -97,42 +105,45 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
       {tags.length > 0 && (
         <div role="group" aria-label="Filter recipes by tag" className="flex flex-wrap justify-center gap-2">
           {tags.map(tag => (
-            <button
+            <FilterBubble
               key={tag}
-              type="button"
-              aria-pressed={activeTag === tag}
-              onClick={() => setActiveTag(tag === activeTag ? null : tag)}
-              className={cn(
-                "min-h-9 rounded-full px-3 py-2 text-xs font-medium transition-colors",
-                activeTag === tag
-                  ? "bg-emerald-600 text-white"
-                  : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800",
-              )}
-            >
-              {tag}
-            </button>
+              value={tag}
+              active={tagFilters.some(filter => filter.value === tag)}
+              excluded={tagFilters.some(filter => filter.value === tag && filter.exclude)}
+              resetVersion={filterResetVersion}
+              onActivate={() => setTagFilters(current => current.some(filter => filter.value === tag)
+                ? current.filter(filter => filter.value !== tag)
+                : [...current, { value: tag, exclude: false }])}
+              onExclude={() => setTagFilters(current => excludeFilter(current, tag))}
+            />
           ))}
         </div>
       )}
-      {(queries.length > 0 || activeTag !== null) && (
+      {dishes.length > 0 && (
+        <p id="plan-filter-help" className="text-center text-xs text-slate-500 dark:text-slate-400">
+          All filters use AND. Double-tap/click a bubble to exclude (red).
+          <span className="sr-only"> Single-click active tags to clear them or custom filters to remove them. Keyboard: N excludes; Enter or Space selects or clears.</span>
+        </p>
+      )}
+      {(queries.length > 0 || tagFilters.length > 0) && (
         <div className="flex flex-wrap items-center justify-center gap-2">
           {queries.length > 0 && (
             <ul aria-label="Ad hoc filters" className="flex min-w-0 flex-wrap justify-center gap-2">
-              {queries.map(value => (
+              {queries.map(({ value, exclude }) => (
                 <li key={value} className="min-w-0 max-w-full">
-                  <button
-                    type="button"
-                    aria-label={`Remove filter ${value}`}
-                    onClick={() => {
-                      setQueries(current => current.filter(query => query !== value));
+                  <FilterBubble
+                    value={value}
+                    active
+                    excluded={exclude}
+                    removable
+                    resetVersion={filterResetVersion}
+                    onActivate={() => {
+                      setQueries(current => current.filter(query => query.value !== value));
                       setFilterError("");
                       input.current?.focus();
                     }}
-                    className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-full bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700"
-                  >
-                    <span className="min-w-0 break-words">{value}</span>
-                    <X aria-hidden className="size-3 shrink-0" />
-                  </button>
+                    onExclude={() => setQueries(current => excludeFilter(current, value))}
+                  />
                 </li>
               ))}
             </ul>
@@ -140,10 +151,11 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
           <button
             type="button"
             onClick={() => {
-              setActiveTag(null);
+              setTagFilters([]);
               setQueries([]);
               setQuery("");
               setFilterError("");
+              setFilterResetVersion(version => version + 1);
               input.current?.focus();
             }}
             className="min-h-9 px-2 text-xs text-slate-500 underline dark:text-slate-400"
@@ -157,7 +169,7 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
           No recipes match these filters.
         </p>
       ) : (
-        <RecipeCards key={JSON.stringify([activeTag, queries])} dishes={filtered} todayIso={todayIso} addDishAction={addDishAction} addTagAction={addTagAction} tagSuggestions={tagSuggestions} />
+        <RecipeCards key={JSON.stringify([tagFilters, queries])} dishes={filtered} todayIso={todayIso} addDishAction={addDishAction} addTagAction={addTagAction} tagSuggestions={tagSuggestions} />
       )}
     </div>
   );

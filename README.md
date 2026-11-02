@@ -73,15 +73,22 @@ available. Older history still distinguishes tried from untried recipes.
 Ties use a deterministic daily shuffle, so unchanged data gives the same order
 throughout the day. Cooldown dishes are oldest-planned first. Every saved dish
 remains accessible; short pools are filled from the remaining recipes.
-Tag chips above the carousel filter recipes by a single tag. Tapping the
-selected tag again clears the filter. Changing tags starts at the first
+Tag chips above the carousel filter recipes by any selected tags. Tapping a
+selected tag again clears that filter. Changing tags starts at the first
 matching recipe and cancels any pending single-tap navigation.
 The search field adds temporary, removable filter chips with **Add filter** or
 Enter. Each chip matches dish names, ingredients or tags, ignoring case and
 surrounding whitespace and allowing substring matches. Recipes must match every
-chip and the selected tag. Suggestions cover all three fields; duplicate chips
-are rejected. Remove individual chips or use **Clear filters** to clear both
-chips and the selected tag. These filters do not change saved recipe tags.
+positive chip and tag, and must not match any negative chip or tag: all filters
+combine with AND. Multiple positive and negative tags may be active together.
+Single-tap a tag to include it; double-tap/click any tag or custom-filter bubble
+to exclude matches. Exclusions turn red and show a minus icon. A single tap
+clears an active tag or removes a custom bubble, including exclusions.
+Single taps wait 400 ms so double-tapping a custom bubble does not remove it first.
+Keyboard users can press **N** on a bubble to exclude it, or Enter/Space to select
+or clear it. Suggestions cover all three fields; duplicate custom bubbles
+are rejected, including when excluded. **Clear filters** clears every mode and
+cancels pending filter taps. These filters do not change saved recipe tags.
 Changing chips also resets the carousel and cancels pending navigation. Filtering keeps
 the recommendation order; it does not rerank or reshuffle recipes.
 Tap a card to view its recipe; double-tap (double-click with a mouse) to open a
@@ -208,8 +215,8 @@ Attached measurements such as `200g` or `cup/57` are separately selectable,
 while fractions and hyphenated ingredient names remain intact. You can edit
 the fields directly. Sentences with a blank ingredient name are automatically
 omitted, even if quantity or unit has been entered. Clear the ingredient name
-to skip a sentence, or swipe its card left by at least 80 pixels or use **Remove**.
-Vertical scrolling, short swipes and editing text fields do not remove rows.
+to skip a sentence, or tap the red trash-can button in its top-right corner.
+Ingredient cards use normal scrolling and text editing without swipe gestures.
 **Undo** restores a removed row with its edits and original position. Rows have
 no numbered "Sentence" headings. Quantity and unit are optional.
 At least one named ingredient is required to apply an import.

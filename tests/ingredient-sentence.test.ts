@@ -18,5 +18,11 @@ test("import rows show suggested fields, editable word controls and accessible r
     assert.ok(html.includes(`value="${value}"`), value);
   }
   assert.doesNotMatch(html, /Sentence \d|<legend/);
-  assert.match(html, /touch-action:pan-y pinch-zoom/);
+  const remove = html.match(/<button[^>]*aria-label="Remove ingredient:[^"]*"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? "";
+  assert.match(remove, /type="button"/);
+  assert.match(remove, /absolute right-2 top-2[^"]*size-10/);
+  assert.match(remove, /border-rose-200 text-rose-600/);
+  assert.match(remove, /<svg[^>]*aria-hidden="true"/);
+  assert.doesNotMatch(remove, />\s*Remove\s*</);
+  assert.doesNotMatch(html, /touch-action|translateX|data-no-swipe/);
 });

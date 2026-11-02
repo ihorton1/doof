@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { ingredientSwipeOffset, isIngredientRemovalSwipe } from "@/lib/ingredient-swipe";
 import {
   ingredientDraftError,
   ingredientWords,
@@ -27,9 +26,6 @@ export function IngredientSentence({
   onRemove: () => void;
 }) {
   const [selected, setSelected] = useState<number[]>([]);
-  const [offset, setOffset] = useState(0);
-  const gesture = useRef<{ id: number; x: number; y: number } | null>(null);
-  const suppressClick = useRef(false);
   const selection = selectedWords(draft.original, selected);
   const error = ingredientDraftError(draft);
 
@@ -39,76 +35,12 @@ export function IngredientSentence({
   }
 
   return (
-    <div className="relative min-w-0 overflow-hidden rounded-lg">
-      <div aria-hidden className="absolute inset-0 flex items-center justify-end gap-2 bg-rose-600 px-4 text-sm text-white">
-        <Trash2 className="size-4" /> Remove
-      </div>
+    <div className="min-w-0">
       <fieldset
         aria-label={`Ingredient: ${draft.original}`}
-        style={{ transform: `translateX(${offset}px)`, touchAction: "pan-y pinch-zoom" }}
-        onPointerDown={(event) => {
-          suppressClick.current = false;
-          if (!event.isPrimary || event.button !== 0 ||
-            (event.target instanceof Element && event.target.closest("input, textarea, select, a, [data-no-swipe]"))) return;
-          gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
-        }}
-        onPointerMove={(event) => {
-          const start = gesture.current;
-          if (!start || start.id !== event.pointerId) return;
-          const dx = event.clientX - start.x;
-          const dy = event.clientY - start.y;
-          if (Math.abs(dy) > 12 && Math.abs(dy) >= Math.abs(dx)) {
-            gesture.current = null;
-            setOffset(0);
-            return;
-          }
-          const next = ingredientSwipeOffset(dx, dy);
-          if (next < 0) {
-            suppressClick.current = true;
-            if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-              event.currentTarget.setPointerCapture(event.pointerId);
-            }
-          }
-          setOffset(Math.max(next, -event.currentTarget.clientWidth));
-        }}
-        onPointerUp={(event) => {
-          const start = gesture.current;
-          gesture.current = null;
-          setOffset(0);
-          if (start?.id === event.pointerId &&
-            isIngredientRemovalSwipe(event.clientX - start.x, event.clientY - start.y)) onRemove();
-        }}
-        onPointerCancel={() => { gesture.current = null; setOffset(0); }}
-        onDragStart={(event) => {
-          if (event.target instanceof Element && !event.target.closest("input, textarea")) {
-            event.preventDefault();
-          }
-        }}
-        onLostPointerCapture={(event) => {
-          if (event.target !== event.currentTarget) return;
-          gesture.current = null;
-          setOffset(0);
-        }}
-        onClickCapture={(event) => {
-          if (event.detail === 0 || !suppressClick.current) return;
-          event.preventDefault();
-          event.stopPropagation();
-          suppressClick.current = false;
-        }}
         className="relative min-w-0 rounded-lg border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900 p-3 space-y-3"
       >
-        <div className="flex justify-end">
-          <button
-            type="button"
-            data-no-swipe
-            onClick={onRemove}
-            aria-label={`Remove ingredient: ${draft.original}`}
-            className="inline-flex min-h-10 items-center gap-1 px-2 text-xs text-rose-700 dark:text-rose-400"
-          >
-            <Trash2 aria-hidden className="size-4" /> Remove
-          </button>
-        </div>
-        <div aria-label="Original sentence: select words" className="flex select-none flex-wrap gap-1">
+        <div aria-label="Original sentence: select words" className="flex select-none flex-wrap gap-1 pr-12">
           {ingredientWords(draft.original).map((word, wordIndex) => (
             <button
               key={wordIndex}
@@ -170,6 +102,15 @@ export function IngredientSentence({
           ))}
         </div>
         {error && <p className="text-xs text-amber-700 dark:text-amber-400">{error}</p>}
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ingredient: ${draft.original}`}
+          title="Remove ingredient"
+          className="absolute right-2 top-2 inline-flex size-10 items-center justify-center rounded-md border border-rose-200 text-rose-600 hover:bg-rose-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-950"
+        >
+          <Trash2 aria-hidden className="size-4" />
+        </button>
       </fieldset>
     </div>
   );
