@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, type MouseEvent, type KeyboardEvent, type DragEvent, type PointerEvent } from "react";
-import { CalendarPlus, Pencil, Tag } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { createRecipeClicks } from "@/lib/recipe-clicks";
 import { type ChooseDishAction } from "@/lib/planning-days";
 import { type AddDishTagAction } from "@/lib/dish-tags";
@@ -121,8 +121,6 @@ export function DishHeader({ dish, todayIso, tagSuggestions, addDishAction, addT
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           <Link href={`/dishes/${dish.id}/edit`} className={actionClassName} aria-label="Edit dish"><Pencil className="size-4" /></Link>
-          <button type="button" onClick={() => open("plan")} className={actionClassName} aria-label="Add to plan" title="Add to plan"><CalendarPlus aria-hidden className="size-4" /></button>
-          <button type="button" onClick={() => open("tag")} className={actionClassName} aria-label="Add a tag" title="Add a tag"><Tag aria-hidden className="size-4" /></button>
         </div>
       </div>
       {dish.imageUrl && (

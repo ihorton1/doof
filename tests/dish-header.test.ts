@@ -21,13 +21,13 @@ function render(value = dish) {
   }));
 }
 
-test("dish title and photo are accessible gesture buttons with keyboard and direct-action alternatives", () => {
+test("dish title and photo retain gestures and keyboard alternatives without extra action buttons", () => {
   const html = render();
   assert.match(html, /<h1[^>]*><button[^>]*type="button"[^>]*>Chilli eggs<\/button><\/h1>/);
   assert.match(html, /aria-label="Plan or tag Chilli eggs"/);
   assert.equal((html.match(/aria-keyshortcuts="Enter Space t"/g) ?? []).length, 2);
-  assert.match(html, /aria-label="Add to plan"/);
-  assert.match(html, /aria-label="Add a tag"/);
+  assert.doesNotMatch(html, /aria-label="Add to plan"|aria-label="Add a tag"/);
+  assert.equal((html.match(/<button\b/g) ?? []).length, 2);
   assert.match(html, /Double-tap the dish title or photo/);
   assert.match(html, /Triple-tap to add a tag/);
   assert.doesNotMatch(html, /<dialog/);
@@ -42,12 +42,12 @@ test("header preserves metadata, edit/source/tag links and the recipe image", ()
   assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
 });
 
-test("dishes without photos or metadata retain title gestures and direct actions", () => {
+test("dishes without photos or metadata retain title gestures without extra action buttons", () => {
   const html = render({ ...dish, imageUrl: null, description: null, servings: null, sourceUrl: null, tags: [] });
   assert.doesNotMatch(html, /<img|src="null"|href="null"|>Source<\/a>/);
   assert.equal((html.match(/aria-keyshortcuts="Enter Space t"/g) ?? []).length, 1);
-  assert.match(html, /aria-label="Add to plan"/);
-  assert.match(html, /aria-label="Add a tag"/);
+  assert.doesNotMatch(html, /aria-label="Add to plan"|aria-label="Add a tag"/);
+  assert.equal((html.match(/<button\b/g) ?? []).length, 1);
 });
 
 test("shared day picker accepts a dish summary and retains 30 dates across the year boundary", () => {

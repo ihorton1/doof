@@ -34,9 +34,9 @@ be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
 On a dish's detail page, double-tap its title or photo to open the same 30-day
 planning picker as Plan, or triple-tap to add a persistent tag with autocomplete.
 A single pointer tap does nothing. Scrolling, dragging or cancelling the pointer
-cancels a pending gesture. The **Add to plan** and **Add a tag** icon buttons are
-direct alternatives; on the title or photo, Enter/Space opens planning and **T**
-opens tagging. Ingredients, notes, source/tag links and editing retain their
+cancels a pending gesture. On the title or photo, Enter/Space opens planning and
+**T** opens tagging; there are no separate calendar or tag buttons.
+Ingredients, notes, source/tag links and editing retain their
 normal interactions. Planning adds dinner without replacing existing meals;
 tagging preserves existing tags, and repeated additions are safe no-ops.
 
