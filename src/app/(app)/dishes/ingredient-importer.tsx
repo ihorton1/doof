@@ -95,8 +95,14 @@ export function IngredientImporter({
     ? { name: recipe.name, ...(previewSource === "ai" ? { notes: recipe.notes } : {}) }
     : undefined;
   const currentDrafts = drafts[selected] ?? [];
-  const included = currentDrafts.filter((draft) => draft.name.trim());
+  const included = currentDrafts.filter((draft) => !draft.dismissed && draft.name.trim());
   const ready = included.length > 0 && included.every((draft) => !ingredientDraftError(draft));
+
+  function updateDraft(index: number, draft: IngredientDraft) {
+    setDrafts(recipes => recipes.map((rows, recipeIndex) =>
+      recipeIndex === selected ? rows.map((row, rowIndex) => rowIndex === index ? draft : row) : rows,
+    ));
+  }
   return (
     <div className={aiOpen || busy || error || message || result
       ? "space-y-3 rounded-lg border border-slate-200 dark:border-slate-700 p-3"
@@ -169,16 +175,27 @@ export function IngredientImporter({
             </div>
           )}
           <div className="space-y-3">
-            {currentDrafts.map((draft, index) => (
+            <p className="text-xs text-slate-500">
+              Review the suggested fields, or select words to correct them. Swipe left or use Remove to omit a line; Undo restores it.
+            </p>
+            {currentDrafts.map((draft, index) => draft.dismissed ? (
+              <div key={`${previewVersion}-${selected}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-slate-300 p-3 text-sm dark:border-slate-700">
+                <p role="status" className="min-w-0 break-words">Removed: {draft.original}</p>
+                <button
+                  type="button"
+                  aria-label={`Undo removal of ${draft.original}`}
+                  onClick={() => updateDraft(index, { ...draft, dismissed: false })}
+                  className="min-h-10 shrink-0 px-2 font-medium text-emerald-700 dark:text-emerald-400"
+                >
+                  Undo
+                </button>
+              </div>
+            ) : (
               <IngredientSentence
                 key={`${previewVersion}-${selected}-${index}`}
                 draft={draft}
-                index={index}
-                onChange={(updated) => setDrafts((recipes) => recipes.map((rows, recipeIndex) =>
-                  recipeIndex === selected
-                    ? rows.map((row, rowIndex) => rowIndex === index ? updated : row)
-                    : rows,
-                ))}
+                onChange={(updated) => updateDraft(index, updated)}
+                onRemove={() => updateDraft(index, { ...draft, dismissed: true })}
               />
             ))}
           </div>

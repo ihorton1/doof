@@ -22,6 +22,10 @@ for (const [unit, aliases] of Object.entries(unitGroups)) {
   for (const alias of aliases) unitAliases.set(alias, unit);
 }
 
+export function isKnownIngredientUnit(value: string): boolean {
+  return unitAliases.has(value.trim().toLowerCase().replace(/\.$/, ""));
+}
+
 export function normalizeIngredientUnit(value: string): string | null {
   const unit = value.trim().toLowerCase();
   if (!unit) return null;

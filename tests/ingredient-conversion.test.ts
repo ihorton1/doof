@@ -8,10 +8,52 @@ import {
   selectedWords,
 } from "../src/lib/ingredient-conversion";
 
-test("drafts retain the original sentence without guessing any fields", () => {
+test("ambiguous packaging retains the original sentence without guessing measurements", () => {
   assert.deepEqual(createIngredientDraft("2 x 400g tins tomatoes"), {
-    original: "2 x 400g tins tomatoes", name: "", quantity: "", unit: "",
+    original: "2 x 400g tins tomatoes", name: "2 x 400g tins tomatoes", quantity: "", unit: "",
   });
+});
+
+test("prefills straightforward measurements while preserving the original text and unit spelling", () => {
+  for (const [original, quantity, unit, name] of [
+    ["2 tablespoons olive oil", "2", "tablespoons", "olive oil"],
+    ["200g all-purpose flour", "200", "g", "all-purpose flour"],
+    ["1 1/2 cups plain flour", "1 1/2", "cups", "plain flour"],
+    ["1\u00bd cups rice", "1\u00bd", "cups", "rice"],
+    ["\u00bc teaspoon salt", "\u00bc", "teaspoon", "salt"],
+    ["1 \u00bd cups rice", "1 \u00bd", "cups", "rice"],
+    ["1\u20442 cup water", "1\u20442", "cup", "water"],
+    ["0.5 l milk", "0.5", "l", "milk"],
+    [".5 tsp. salt", ".5", "tsp.", "salt"],
+    ["1,5 litres stock", "1,5", "litres", "stock"],
+    ["2-3 cloves garlic", "2-3", "cloves", "garlic"],
+    ["1 1/2\u20132 cups water", "1 1/2\u20132", "cups", "water"],
+    ["1 to 2 tbsp olive oil", "1 to 2", "tbsp", "olive oil"],
+    ["2 large onions", "2", "", "large onions"],
+    ["1 egg", "1", "", "egg"],
+    ["2 heaped tablespoons of flour", "2", "heaped tablespoons", "flour"],
+    ["3 fl. oz. milk", "3", "fl. oz.", "milk"],
+    ["2 fluid ounces water", "2", "fluid ounces", "water"],
+    ["2 pinches salt", "2", "pinches", "salt"],
+    ["  \u2022 2 TBSP olive oil  ", "2", "TBSP", "olive oil"],
+    ["2 mystery-scoops flour", "2", "", "mystery-scoops flour"],
+    ["olive oil, for frying", "", "", "olive oil, for frying"],
+  ]) {
+    assert.deepEqual(createIngredientDraft(original), { original, quantity, unit, name }, original);
+  }
+});
+
+test("uncertain alternative measurements are not discarded and headings remain omitted", () => {
+  for (const original of [
+    "1 (400 g) can tomatoes", "\u00bc cup/57 grams butter", "200g/7oz flour",
+    "1 cup (200g) rice", "2 x 400g tins tomatoes", "2\u00d7400g tins tomatoes",
+    "7up", "2% milk", "200 g",
+  ]) {
+    assert.deepEqual(createIngredientDraft(original), { original, name: original, quantity: "", unit: "" }, original);
+  }
+  for (const original of ["For the sauce:", "For the dressing", "Topping:"]) {
+    assert.deepEqual(createIngredientDraft(original), { original, name: "", quantity: "", unit: "" });
+  }
 });
 
 test("selected words use sentence order, including non-contiguous and repeated words", () => {
@@ -49,9 +91,25 @@ test("conversion trims input, skips unnamed rows even with measurements, and pre
 });
 
 test("entirely unnamed conversions cannot replace existing ingredients", () => {
-  assert.throws(() => convertedIngredients([createIngredientDraft("200 g flour")]), /at least one/);
+  assert.throws(() => convertedIngredients([{ ...createIngredientDraft("200 g flour"), name: "" }]), /at least one/);
   assert.throws(() => convertedIngredients([{ ...createIngredientDraft("salt"), name: " " }]), /at least one/);
   assert.throws(() => convertedIngredients([]), /at least one/);
+});
+
+test("dismissal excludes a prepared row without losing edits, and undo restores it in order", () => {
+  const drafts = ["2 tablespoons olive oil", "1 cup rice", "Salt to taste"].map(createIngredientDraft);
+  drafts[1] = { ...drafts[1], quantity: "1 1/2", dismissed: true };
+  assert.deepEqual(convertedIngredients(drafts), [
+    { name: "olive oil", quantity: "2", unit: "tablespoons" },
+    { name: "Salt to taste", quantity: "", unit: "" },
+  ]);
+  drafts[1].dismissed = false;
+  assert.deepEqual(convertedIngredients(drafts)[1], { name: "rice", quantity: "1 1/2", unit: "cup" });
+  assert.equal(drafts[1].original, "1 cup rice");
+  assert.throws(() => convertedIngredients(drafts.map(draft => ({ ...draft, dismissed: true }))), /at least one/);
+  const invalid = { ...drafts[0], unit: "x".repeat(51), dismissed: true };
+  assert.equal(ingredientDraftError(invalid), null);
+  assert.throws(() => convertedIngredients([{ ...invalid, dismissed: false }]), /Finish preparing/);
 });
 
 test("clearing a name omits that row and ignores its unused measurement errors", () => {

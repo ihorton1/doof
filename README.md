@@ -196,14 +196,22 @@ just from opening an edit form. Doof reads `Recipe.recipeIngredient`
 from Schema.org JSON-LD embedded in the page, including arrays, `@graph` and
 nested recipes. If there are multiple recipes, choose one in the preview.
 
-The conversion widget shows each original ingredient sentence as selectable
-words. Select one or more words, then assign them to **Quantity**, **Unit** or
-**Ingredient**. Fields start blank: Doof does not guess the website's format.
+The conversion widget makes a best-effort split into **Quantity**, **Unit** and
+**Ingredient** for both URL and AI imports. For example, `2 tablespoons olive oil`
+prefills `2`, `tablespoons` and `olive oil`. Fractions, ranges, attached measurements
+and common units are recognized without converting measurements or changing unit
+spelling. Ambiguous package sizes and alternative measurements stay intact in the
+ingredient field for review; obvious section headings start omitted.
+Each original ingredient sentence remains available as selectable words.
+Select one or more words, then assign them to a field to correct the suggestion.
 Attached measurements such as `200g` or `cup/57` are separately selectable,
 while fractions and hyphenated ingredient names remain intact. You can edit
 the fields directly. Sentences with a blank ingredient name are automatically
 omitted, even if quantity or unit has been entered. Clear the ingredient name
-to skip a sentence; no checkbox is needed. Quantity and unit are optional.
+to skip a sentence, or swipe its card left by at least 80 pixels or use **Remove**.
+Vertical scrolling, short swipes and editing text fields do not remove rows.
+**Undo** restores a removed row with its edits and original position. Rows have
+no numbered "Sentence" headings. Quantity and unit are optional.
 At least one named ingredient is required to apply an import.
 
 **Use recipe** applies the JSON recipe title and replaces the ingredient rows.

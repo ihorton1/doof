@@ -125,17 +125,21 @@ test("stored prompt example is valid and describes the accepted fields", () => {
   assert.match(AI_RECIPE_PROMPT, /1-200 cooking steps/);
 });
 
-test("AI ingredient lines enter the same manual conversion workflow", () => {
+test("AI ingredient lines receive suggested fields and remain manually editable or omittable", () => {
   const result = parseAiRecipe(JSON.stringify(recipe));
   const drafts = result.ingredients.map(createIngredientDraft);
-  assert.ok(drafts.every((draft) => draft.name === "" && draft.quantity === "" && draft.unit === ""));
-  assert.throws(() => convertedIngredients(drafts), /at least one/);
-  assert.deepEqual(convertedIngredients([
-    { ...drafts[0], name: "rice", quantity: "1", unit: "cup" },
-    { ...drafts[1], name: "water", quantity: "2", unit: "cups" },
-    drafts[2],
-  ]), [
+  assert.deepEqual(drafts.map(draft => draft.original), recipe.recipeIngredient);
+  assert.deepEqual(convertedIngredients(drafts), [
     { name: "rice", quantity: "1", unit: "cup" },
+    { name: "water", quantity: "2", unit: "cups" },
+    { name: "Salt to taste", quantity: "", unit: "" },
+  ]);
+  assert.deepEqual(convertedIngredients([
+    { ...drafts[0], name: "rice", quantity: "1 1/2", unit: "cup" },
+    { ...drafts[1], name: "water", quantity: "2", unit: "cups" },
+    { ...drafts[2], dismissed: true },
+  ]), [
+    { name: "rice", quantity: "1 1/2", unit: "cup" },
     { name: "water", quantity: "2", unit: "cups" },
   ]);
 });

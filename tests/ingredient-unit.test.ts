@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { normalizeIngredientUnit } from "../src/lib/ingredient-unit";
+import { isKnownIngredientUnit, normalizeIngredientUnit } from "../src/lib/ingredient-unit";
 
 test("normalizes the production unit variants to short recognizable forms", () => {
   for (const [input, expected] of [
@@ -14,6 +14,7 @@ test("normalizes the production unit variants to short recognizable forms", () =
     ["teaspoon", "tsp"],
   ]) {
     assert.equal(normalizeIngredientUnit(input), expected, input);
+    assert.equal(isKnownIngredientUnit(input), true, input);
   }
 });
 
@@ -51,6 +52,7 @@ test("preserves descriptive, unknown and qualified units without guessing", () =
     "constructor", "__proto__",
   ]) {
     assert.equal(normalizeIngredientUnit(` ${input.toUpperCase()} `), input);
+    assert.equal(isKnownIngredientUnit(input), false, input);
   }
 });
 
