@@ -61,6 +61,7 @@ export async function chooseDish(input: { dishId: string; date: string }): Promi
         revalidatePath("/meals");
         revalidatePath("/today");
         revalidatePath("/dishes");
+        revalidatePath(`/dishes/${dishId}`);
         revalidatePath("/shop");
       }
       return result;

@@ -31,6 +31,15 @@ autocomplete as Plan, or focus a meal card and press **T**. Freeform meals canno
 be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
 400 ms pause to distinguish triple taps; swiping cancels pending taps.
 
+On a dish's detail page, double-tap its title or photo to open the same 30-day
+planning picker as Plan, or triple-tap to add a persistent tag with autocomplete.
+A single pointer tap does nothing. Scrolling, dragging or cancelling the pointer
+cancels a pending gesture. The **Add to plan** and **Add a tag** icon buttons are
+direct alternatives; on the title or photo, Enter/Space opens planning and **T**
+opens tagging. Ingredients, notes, source/tag links and editing retain their
+normal interactions. Planning adds dinner without replacing existing meals;
+tagging preserves existing tags, and repeated additions are safe no-ops.
+
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Meals** (`/meals`) opens in **Day** view with today and the next six days.
 Scrolling to the bottom loads another seven consecutive days, across week,
@@ -86,7 +95,8 @@ to exclude matches. Exclusions turn red and show a minus icon. A single tap
 clears an active tag or removes a custom bubble, including exclusions.
 Single taps wait 400 ms so double-tapping a custom bubble does not remove it first.
 Keyboard users can press **N** on a bubble to exclude it, or Enter/Space to select
-or clear it. Suggestions cover all three fields; duplicate custom bubbles
+or clear it. Gesture and keyboard guidance is available to screen readers without
+a visible help line. Suggestions cover all three fields; duplicate custom bubbles
 are rejected, including when excluded. **Clear filters** clears every mode and
 cancels pending filter taps. These filters do not change saved recipe tags.
 Changing chips also resets the carousel and cancels pending navigation. Filtering keeps

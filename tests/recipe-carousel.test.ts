@@ -96,6 +96,7 @@ test("Plan offers an ad hoc filter form with title, ingredient and tag suggestio
   assert.doesNotMatch(html, /aria-label="Ad hoc filters"/);
   assert.doesNotMatch(html, />Clear filters<\/button>/);
   assert.doesNotMatch(render([]), /aria-label="Add recipe filter"/);
-  assert.match(html, /All filters use AND/);
+  assert.doesNotMatch(html, /All filters use AND/);
+  assert.match(html, /<p id="plan-filter-help" class="sr-only">/);
   assert.match(html, /Double-tap\/click a bubble to exclude/);
 });

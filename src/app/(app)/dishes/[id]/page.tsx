@@ -1,10 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { deleteDish } from "../actions";
-import { Pencil } from "lucide-react";
 import { DeleteDishButton } from "./delete-dish-button";
+import { DishHeader } from "./dish-header";
+import { getTagSuggestions } from "@/lib/tag-suggestions";
+import { toISODate } from "@/lib/utils";
+import { chooseDish } from "../../plan/choose-dish";
+import { addDishTag } from "../../plan/add-dish-tag";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +17,7 @@ export default async function DishDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [dish, history, dishIdsWithImages] = await Promise.all([
+  const [dish, history, dishIdsWithImages, tagSuggestions] = await Promise.all([
     prisma.dish.findUnique({
       where: { id },
       select: {
@@ -39,6 +42,7 @@ export default async function DishDetailPage({
       select: { id: true, date: true, cookedAt: true, mealSlot: true },
     }),
     getDishIdsWithImages(),
+    getTagSuggestions(),
   ]);
   if (!dish) notFound();
 
@@ -46,62 +50,22 @@ export default async function DishDetailPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{dish.name}</h1>
-          {dish.description && (
-            <p className="text-slate-600 dark:text-slate-400 mt-1">
-              {dish.description}
-            </p>
-          )}
-          {dish.servings && (
-            <p className="text-sm text-slate-500 mt-1">
-              Serves {dish.servings}
-            </p>
-          )}
-          {dish.sourceUrl && (
-            <a
-              href={dish.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-emerald-600 hover:underline mt-1 inline-block break-all"
-            >
-              Source
-            </a>
-          )}
-          {dish.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {dish.tags.map((dt) => (
-                <Link
-                  key={dt.tag.id}
-                  href={`/dishes?tag=${encodeURIComponent(dt.tag.name)}`}
-                  className="inline-flex items-center h-6 px-2 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-800"
-                >
-                  {dt.tag.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col gap-2 flex-shrink-0">
-          <Link
-            href={`/dishes/${dish.id}/edit`}
-            className="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
-            aria-label="Edit dish"
-          >
-            <Pencil className="size-4" />
-          </Link>
-        </div>
-      </div>
-
-      {dishIdsWithImages.has(dish.id) && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
-          src={dishImagePath(dish.id, dish.updatedAt)}
-          alt={dish.name}
-          className="w-full max-h-80 object-cover rounded-lg border border-slate-200 dark:border-slate-800"
-        />
-      )}
+      <DishHeader
+        key={dish.id}
+        dish={{
+          id: dish.id,
+          name: dish.name,
+          description: dish.description,
+          servings: dish.servings,
+          sourceUrl: dish.sourceUrl,
+          imageUrl: dishIdsWithImages.has(dish.id) ? dishImagePath(dish.id, dish.updatedAt) : null,
+          tags: dish.tags.map(({ tag }) => tag.name),
+        }}
+        todayIso={toISODate(new Date())}
+        tagSuggestions={tagSuggestions}
+        addDishAction={chooseDish}
+        addTagAction={addDishTag}
+      />
 
       {dish.ingredients.length > 0 && (
         <section>
