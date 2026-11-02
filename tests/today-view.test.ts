@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { TodayView } from "../src/app/(app)/today/today-view";
 
 type Props = Parameters<typeof TodayView>[0];
@@ -13,12 +14,20 @@ function renderToday(entries: Entry[]) {
     { iso: "2026-10-30", label: "Today", isToday: true, isFocus: true, entries },
     { iso: "2026-10-31", label: "Tomorrow", isToday: false, isFocus: false, entries: [] },
   ];
-  return renderToStaticMarkup(createElement(TodayView, {
+  const view = createElement(TodayView, {
     days,
     focusIso: "2026-10-30",
     prevFocusIso: "2026-10-29",
     nextFocusIso: "2026-10-31",
-  }));
+    addTagAction: async ({ tag }) => ({ status: "added", tag } as const),
+    tagSuggestions: ["fast", "vegetarian", "lyse friendly"],
+  });
+  return renderToStaticMarkup(createElement(AppRouterContext.Provider, {
+    value: {
+      back() {}, forward() {}, refresh() {},
+      push() {}, replace() {}, prefetch() {},
+    },
+  }, view));
 }
 
 const dish: Entry = {
@@ -73,8 +82,20 @@ test("multiple meals have individual snap cards and leave room for the next-card
   const html = renderToday([dish, { ...dish, id: "entry-2", dishName: "Soup" }]);
   assert.match(html, /auto-rows-\[minmax\(90%,auto\)\]/);
   assert.match(html, /snap-y snap-proximity/);
-  assert.match(html, /<article aria-label="Crispy chilli eggs" class="[^"]*snap-start[^"]*rounded-\[2rem\]/);
+  assert.match(html, /<article aria-label="Crispy chilli eggs"[^>]*class="[^"]*snap-start[^"]*rounded-\[2rem\]/);
   assert.match(html, /<article aria-label="Soup"/);
+});
+
+test("saved dishes offer triple-tap tagging and a keyboard alternative without tagging freeform meals", () => {
+  const html = renderToday([
+    dish,
+    { ...dish, id: "entry-2", dishId: null, dishName: null, dishImageUrl: null, dishTags: [], freeformText: "Leftovers" },
+  ]);
+  assert.match(html, /Triple-tap a dish to add a tag/);
+  assert.match(html, /data-tag-dish="dish-1" tabindex="0" aria-keyshortcuts="t" aria-describedby="today-tag-help"/);
+  assert.match(html, /<article aria-label="Leftovers" class=/);
+  assert.doesNotMatch(html, /data-tag-dish="null"/);
+  assert.doesNotMatch(html, /<dialog/);
 });
 
 test("single meals fill the available carousel height", () => {

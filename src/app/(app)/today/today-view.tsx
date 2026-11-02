@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createRecipeClicks } from "@/lib/recipe-clicks";
+import { type AddDishTagAction } from "@/lib/dish-tags";
+import { QuickTagPicker } from "../plan/quick-tag-picker";
 
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -27,19 +31,80 @@ type Day = {
   }[];
 };
 
+type TaggingDish = { id: string; name: string; tags: string[] };
+
 export function TodayView({
   days,
   focusIso,
   prevFocusIso,
   nextFocusIso,
+  addTagAction,
+  tagSuggestions,
 }: {
   days: Day[];
   focusIso: string;
   prevFocusIso: string;
   nextFocusIso: string;
+  addTagAction: AddDishTagAction;
+  tagSuggestions: string[];
 }) {
+  const router = useRouter();
+  const [tagging, setTagging] = useState<TaggingDish | null>(null);
+  const [message, setMessage] = useState("");
+  const clicks = useMemo(() => {
+    const navigate = ({ href }: { href: string | null }) => {
+      if (href) router.push(href);
+    };
+    return createRecipeClicks<TaggingDish & { href: string | null }>({
+      single: navigate,
+      double: navigate,
+      triple: setTagging,
+    });
+  }, [router]);
+
+  useEffect(() => () => clicks.cancel(), [clicks, focusIso]);
+
+  function getDish(target: EventTarget) {
+    if (!(target instanceof Element)) return null;
+    const id = target.closest<HTMLElement>("[data-tag-dish]")?.dataset.tagDish;
+    const entry = days.flatMap(day => day.entries).find(entry => entry.dishId === id);
+    return entry?.dishId
+      ? { id: entry.dishId, name: entry.dishName ?? "Recipe", tags: entry.dishTags }
+      : null;
+  }
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-4">
+    <div
+      className="flex flex-col flex-1 min-h-0 gap-4"
+      onClickCapture={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.detail === 0) {
+          clicks.cancel();
+          return;
+        }
+        const dish = getDish(event.target);
+        if (!dish || !(event.target instanceof Element)) {
+          clicks.cancel();
+          return;
+        }
+        // Capture before Next's links navigate so triple taps can finish.
+        event.preventDefault();
+        const href = event.target.closest("a")?.getAttribute("href") ?? null;
+        clicks.click({ ...dish, href });
+      }}
+      onKeyDownCapture={(event) => {
+        if (event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== "t") return;
+        const dish = getDish(event.target);
+        if (!dish) return;
+        event.preventDefault();
+        clicks.cancel();
+        setTagging(dish);
+      }}
+      onScrollCapture={() => clicks.cancel()}
+      onPointerCancelCapture={() => clicks.cancel()}
+      onDragStartCapture={() => clicks.cancel()}
+    >
+      <p id="today-tag-help" className="sr-only">Triple-tap a dish to add a tag. Keyboard: focus a meal card and press T.</p>
+      <p role="status" className="sr-only">{message}</p>
       <MobileCarousel days={days} focusIso={focusIso} />
 
       <DesktopRow
@@ -48,6 +113,19 @@ export function TodayView({
         prevFocusIso={prevFocusIso}
         nextFocusIso={nextFocusIso}
       />
+      {tagging && (
+        <QuickTagPicker
+          key={tagging.id}
+          dish={tagging}
+          suggestions={tagSuggestions}
+          addTagAction={addTagAction}
+          onClose={() => setTagging(null)}
+          onAdded={(tag, duplicate) => {
+            setMessage(`${tagging.name} ${duplicate ? "already has" : "tagged with"} "${tag}".`);
+            setTagging(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -263,8 +341,12 @@ function PlannedMeals({
           <article
             key={entry.id}
             aria-label={title}
+            data-tag-dish={entry.dishId ?? undefined}
+            tabIndex={entry.dishId && !inLink ? 0 : undefined}
+            aria-keyshortcuts={entry.dishId && !inLink ? "t" : undefined}
+            aria-describedby={entry.dishId ? "today-tag-help" : undefined}
             className={cn(
-              "flex min-w-0 flex-col gap-4 snap-start rounded-[2rem] border bg-white p-5 dark:bg-slate-900 md:p-3",
+              "flex min-w-0 touch-manipulation select-none flex-col gap-4 snap-start rounded-[2rem] border bg-white p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-slate-900 md:p-3",
               emphasized
                 ? "border-emerald-500/40 shadow-sm"
                 : "border-slate-200 dark:border-slate-800",

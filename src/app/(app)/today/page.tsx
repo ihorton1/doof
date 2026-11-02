@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { addDays, toISODate, fromISODate } from "@/lib/utils";
 import { TodayView } from "./today-view";
+import { getTagSuggestions } from "@/lib/tag-suggestions";
+import { addDishTag } from "../plan/add-dish-tag";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,7 @@ export default async function TodayPage({
   const rangeStart = addDays(focus, -half);
   const rangeEnd = addDays(focus, half + 1);
 
-  const [entries, dishIdsWithImages] = await Promise.all([
+  const [entries, dishIdsWithImages, tagSuggestions] = await Promise.all([
     prisma.mealPlanEntry.findMany({
       where: {
         mealSlot: "dinner",
@@ -43,6 +45,7 @@ export default async function TodayPage({
       orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     }),
     getDishIdsWithImages(),
+    getTagSuggestions(),
   ]);
 
   const byDate = new Map<string, typeof entries>();
@@ -83,6 +86,8 @@ export default async function TodayPage({
       focusIso={focusIso}
       prevFocusIso={toISODate(addDays(focus, -1))}
       nextFocusIso={toISODate(addDays(focus, 1))}
+      addTagAction={addDishTag}
+      tagSuggestions={tagSuggestions}
     />
   );
 }

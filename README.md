@@ -26,6 +26,10 @@ centred above the cards in the same bold emerald typography as recipe titles,
 without a duplicate ISO date. Each meal has its own box;
 days with multiple meals use a vertical snap carousel with a peek of the next
 card. Longer titles and tags remain accessible by scrolling.
+Triple-tap any saved-dish card to add a persistent recipe tag using the same
+autocomplete as Plan, or focus a meal card and press **T**. Freeform meals cannot
+be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
+400 ms pause to distinguish triple taps; swiping cancels pending taps.
 
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Meals** (`/meals`) opens in **Day** view with today and the next six days.
