@@ -3,9 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { isValidSessionCookie, SESSION_COOKIE_NAME } from "@/lib/auth";
 import { normalizeIngredientUnit } from "@/lib/ingredient-unit";
 import { normalizeTag } from "@/lib/dish-tags";
+import { dishRatingSchema } from "@/lib/dish-ratings";
 
 const ingredientSchema = z.object({
   name: z.string().min(1).max(200),
@@ -21,6 +24,7 @@ const dishSchema = z.object({
   servings: z.number().int().positive().optional().nullable(),
   sourceUrl: z.string().url().max(500).optional().nullable().or(z.literal("")),
   imageUrl: z.string().max(5_000_000).optional().nullable(),
+  rating: dishRatingSchema.optional(),
   ingredients: z.array(ingredientSchema),
   tags: z.array(z.string().min(1).max(40)).default([]),
 });
@@ -63,6 +67,7 @@ function parseDishForm(formData: FormData) {
     servings,
     sourceUrl: sourceUrlRaw || null,
     imageUrl: imageUrlRaw || null,
+    rating: formData.has("rating") ? formData.get("rating") || null : undefined,
     ingredients,
     tags,
   });
@@ -83,7 +88,13 @@ async function upsertTagIds(names: string[]): Promise<string[]> {
   return ids;
 }
 
+async function requireSession() {
+  const cookie = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
+  if (!isValidSessionCookie(cookie)) throw new Error("Sign in again before saving a dish.");
+}
+
 export async function createDish(formData: FormData) {
+  await requireSession();
   const data = parseDishForm(formData);
   const tagIds = await upsertTagIds(data.tags);
   const dish = await prisma.dish.create({
@@ -94,6 +105,7 @@ export async function createDish(formData: FormData) {
       servings: data.servings ?? null,
       sourceUrl: data.sourceUrl || null,
       imageUrl: data.imageUrl || null,
+      rating: data.rating ?? null,
       ingredients: {
         create: data.ingredients.map((ing, i) => ({
           name: ing.name,
@@ -115,6 +127,7 @@ export async function createDish(formData: FormData) {
 }
 
 export async function updateDish(id: string, formData: FormData) {
+  await requireSession();
   const data = parseDishForm(formData);
   const tagIds = await upsertTagIds(data.tags);
   await prisma.$transaction([
@@ -129,6 +142,7 @@ export async function updateDish(id: string, formData: FormData) {
         servings: data.servings ?? null,
         sourceUrl: data.sourceUrl || null,
         imageUrl: data.imageUrl || null,
+        rating: data.rating,
         ingredients: {
           create: data.ingredients.map((ing, i) => ({
             name: ing.name,
@@ -148,6 +162,8 @@ export async function updateDish(id: string, formData: FormData) {
   revalidatePath("/plan");
   revalidatePath("/shop");
   revalidatePath(`/dishes/${id}`);
+  revalidatePath(`/dishes/${id}/edit`);
+  revalidatePath("/today");
   redirect(`/dishes/${id}`);
 }
 

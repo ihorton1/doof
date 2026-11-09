@@ -15,6 +15,7 @@ test("Plan loads every plan occurrence and renders Most cooked after the carouse
   const { prisma } = await import("../src/lib/prisma");
   const recipes = ["Soup", "Pasta"].map(name => ({
     id: name.toLowerCase(), name, description: null,
+    rating: name === "Soup" ? "delish" : null,
     updatedAt: new Date("2026-11-09T00:00:00Z"),
     tags: [{ tag: { name: "quick" } }], ingredients: [],
   }));
@@ -55,4 +56,6 @@ test("Plan loads every plan occurrence and renders Most cooked after the carouse
   assert.match(list, /aria-label="Added to plan 1 time"/);
   assert.match(list, /src="\/api\/dishes\/soup\/image\?v=/);
   assert.ok(list.indexOf('href="/dishes/soup"') < list.indexOf('href="/dishes/pasta"'));
+  assert.match(list, /aria-label="Rating: delish"/);
+  assert.equal((html.match(/aria-label="Rating: delish"/g) ?? []).length, 2);
 });

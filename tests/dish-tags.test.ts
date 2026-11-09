@@ -93,7 +93,8 @@ test("the dish form groups tag controls without a wrapping label that can activa
     initial: { name: "Smashed Beef Kebab", tags: ["nytimes", "lyse friendly"] },
     suggestions: { names: [], units: [], tags: ["nytimes", "lyse friendly"] },
   }));
-  const fieldset = html.match(/<fieldset\b[^>]*>[\s\S]*?<\/fieldset>/)?.[0] ?? "";
+  const fieldset = [...html.matchAll(/<fieldset\b[^>]*>[\s\S]*?<\/fieldset>/g)]
+    .map(match => match[0]).find(fieldset => fieldset.includes(">Tags</legend>")) ?? "";
   assert.match(fieldset, /<legend[^>]*>Tags<\/legend>/);
   assert.match(fieldset, /aria-label="Add tags"/);
   assert.match(fieldset, /name="tag" value="nytimes"/);

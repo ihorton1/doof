@@ -8,6 +8,7 @@ import { getTagSuggestions } from "@/lib/tag-suggestions";
 import { toISODate } from "@/lib/utils";
 import { chooseDish } from "../../plan/choose-dish";
 import { addDishTag } from "../../plan/add-dish-tag";
+import { setDishRating } from "../set-dish-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ export default async function DishDetailPage({
       select: {
         id: true,
         name: true,
+        rating: true,
         description: true,
         notes: true,
         servings: true,
@@ -55,6 +57,7 @@ export default async function DishDetailPage({
         dish={{
           id: dish.id,
           name: dish.name,
+          rating: dish.rating,
           description: dish.description,
           servings: dish.servings,
           sourceUrl: dish.sourceUrl,
@@ -65,6 +68,7 @@ export default async function DishDetailPage({
         tagSuggestions={tagSuggestions}
         addDishAction={chooseDish}
         addTagAction={addDishTag}
+        setRatingAction={setDishRating}
       />
 
       {dish.ingredients.length > 0 && (

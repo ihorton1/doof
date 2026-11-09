@@ -6,6 +6,7 @@ import { getTagSuggestions } from "@/lib/tag-suggestions";
 import { addDishTag } from "../plan/add-dish-tag";
 import { getLeftovers, getLeftoverWindow } from "@/lib/leftovers";
 import { dismissLeftovers } from "./dismiss-leftovers";
+import { setDishRating } from "../dishes/set-dish-rating";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function TodayPage({
           select: {
             id: true,
             name: true,
+            rating: true,
             updatedAt: true,
             tags: { include: { tag: true }, orderBy: { tag: { name: "asc" } } },
           },
@@ -88,6 +90,7 @@ export default async function TodayPage({
             id: entry.id,
             dishId: entry.dishId,
             dishName: entry.dish?.name ?? null,
+            dishRating: entry.dish?.rating ?? null,
             dishTags: entry.dish?.tags.map(({ tag }) => tag.name) ?? [],
             dishImageUrl:
               entry.dish && dishIdsWithImages.has(entry.dish.id)
@@ -106,6 +109,7 @@ export default async function TodayPage({
       prevFocusIso={toISODate(addDays(focus, -1))}
       nextFocusIso={toISODate(addDays(focus, 1))}
       addTagAction={addDishTag}
+      setRatingAction={setDishRating}
       tagSuggestions={tagSuggestions}
       leftovers={getLeftovers(leftoverEntries.map((entry) => ({
         ...entry,

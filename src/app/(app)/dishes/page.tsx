@@ -46,6 +46,7 @@ export default async function DishesPage({
         id: true,
         name: true,
         description: true,
+        rating: true,
         updatedAt: true,
         ingredients: {
           select: { name: true },
@@ -120,6 +121,7 @@ export default async function DishesPage({
       id: dish.id,
       name: dish.name,
       description: dish.description,
+      rating: dish.rating,
       imageUrl: dishIdsWithImages.has(dish.id)
         ? dishImagePath(dish.id, dish.updatedAt)
         : null,

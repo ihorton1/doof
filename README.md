@@ -55,6 +55,23 @@ Ingredients, notes, source/tag links and editing retain their
 normal interactions. Planning adds dinner without replacing existing meals;
 tagging preserves existing tags, and repeated additions are safe no-ops.
 
+Saved dishes have an optional rating: **dud** (muted red), **eh** (amber),
+**yum** (emerald), or **delish** (purple), always displayed with its text label.
+On dish detail, Today, Plan and Dishes, the rating is the first pill in the
+recipe's tag row. It remains separate from tags and is not a tag filter.
+On dish detail and Today cards, tap **Rate dish** or the current rating to open
+a four-choice picker. Choosing a rating saves immediately; **Clear rating**
+restores the unrated state. Failed saves keep the picker open with an error so
+you can retry. The new/edit dish form also has an optional rating, saved with
+**Save dish**; importing ingredients does not change it.
+Plan cards, the Dishes list, Most cooked, and linked adjacent desktop Today
+cards show read-only badges; unrated dishes have no badge in these locations.
+Ratings belong to the dish, shared across every planned occurrence, and are
+separate from tags. They do not affect search, filters, recommendation order,
+or cooking counts. Leftovers, Shop and the meal calendar do not show ratings.
+Existing title/photo planning and tagging gestures are unchanged; rating
+controls use explicit buttons instead.
+
 The bottom tabs are **Today**, **Meals**, **Plan**, **Dishes** and **Shop**.
 **Meals** (`/meals`) opens in **Day** view with today and the next six days.
 Scrolling to the bottom loads another seven consecutive days, across week,

@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { filterDishes, getDishSearchSuggestions } from "@/lib/dish-search";
+import { DishRatingBadge } from "@/components/dish-rating-badge";
+import type { DishRating } from "@/lib/dish-ratings";
 
 export type DishListItem = {
   id: string;
@@ -13,6 +15,7 @@ export type DishListItem = {
   tags: string[];
   ingredientNames: string[];
   status: string;
+  rating: DishRating | null;
 };
 
 export function DishList({ dishes }: { dishes: DishListItem[] }) {
@@ -107,8 +110,9 @@ export function DishList({ dishes }: { dishes: DishListItem[] }) {
                         {matchingIngredients.join(", ")}
                       </div>
                     )}
-                    {dish.tags.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-1">
+                    {(dish.rating || dish.tags.length > 0) && (
+                      <div role="group" aria-label="Recipe rating and tags" className="mt-1 flex flex-wrap items-center gap-1">
+                        <DishRatingBadge rating={dish.rating} />
                         {dish.tags.map((tag) => (
                           <span
                             key={tag}

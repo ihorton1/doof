@@ -8,8 +8,8 @@ import { getMostPlannedDishes } from "../src/lib/plan-recommendations";
 test("Most cooked shows recipe links, saved thumbnails and correctly pluralized plan counts", () => {
   const html = renderToStaticMarkup(createElement(MostCookedMeals, {
     dishes: [
-      { id: "soup", name: "Soup", imageUrl: "/api/dishes/soup/image?v=123", planCount: 12 },
-      { id: "pasta", name: "Pasta", imageUrl: null, planCount: 1 },
+      { id: "soup", name: "Soup", imageUrl: "/api/dishes/soup/image?v=123", planCount: 12, rating: "delish" },
+      { id: "pasta", name: "Pasta", imageUrl: null, planCount: 1, rating: null },
     ],
   }));
   assert.match(html, /aria-labelledby="most-cooked-heading"/);
@@ -22,12 +22,14 @@ test("Most cooked shows recipe links, saved thumbnails and correctly pluralized 
   assert.match(html, /aria-label="Added to plan 12 times"/);
   assert.match(html, /aria-label="Added to plan 1 time"/);
   assert.doesNotMatch(html, /1 times|src="null"|<button/);
+  assert.equal((html.match(/aria-label="Rating:/g) ?? []).length, 1);
+  assert.match(html, /aria-label="Rating: delish"/);
   assert.ok(html.indexOf('href="/dishes/soup"') < html.indexOf('href="/dishes/pasta"'));
 });
 
 test("only the top ten planned saved meals are rendered", () => {
   const recipes = Array.from({ length: 12 }, (_, index) => ({
-    id: `dish-${index}`, name: `Meal ${index}`, imageUrl: null,
+    id: `dish-${index}`, name: `Meal ${index}`, imageUrl: null, rating: null,
   }));
   const history = recipes.flatMap((dish, index) =>
     Array.from({ length: index + 1 }, () => ({ dishId: dish.id })),

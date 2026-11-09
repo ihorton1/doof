@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { UtensilsCrossed } from "lucide-react";
+import { DishRatingBadge } from "@/components/dish-rating-badge";
+import type { DishRating } from "@/lib/dish-ratings";
 
 type MostCookedDish = {
   id: string;
   name: string;
   imageUrl: string | null;
   planCount: number;
+  rating: DishRating | null;
 };
 
 export function MostCookedMeals({ dishes }: { dishes: MostCookedDish[] }) {
@@ -31,7 +34,10 @@ export function MostCookedMeals({ dishes }: { dishes: MostCookedDish[] }) {
                     <UtensilsCrossed className="size-6 text-slate-300 dark:text-slate-600" />
                   )}
                 </div>
-                <h3 className="min-w-0 flex-1 break-words font-bold text-emerald-800 dark:text-emerald-300">{dish.name}</h3>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <h3 className="break-words font-bold text-emerald-800 dark:text-emerald-300">{dish.name}</h3>
+                  <DishRatingBadge rating={dish.rating} />
+                </div>
                 <span
                   aria-label={`Added to plan ${dish.planCount} ${dish.planCount === 1 ? "time" : "times"}`}
                   className="shrink-0 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"

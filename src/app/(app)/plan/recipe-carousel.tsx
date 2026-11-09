@@ -13,6 +13,8 @@ import { createRecipeClicks } from "@/lib/recipe-clicks";
 import { QuickTagPicker } from "./quick-tag-picker";
 import { FilterBubble } from "./filter-bubble";
 import { DayPicker } from "./day-picker";
+import { DishRatingBadge } from "@/components/dish-rating-badge";
+import type { DishRating } from "@/lib/dish-ratings";
 
 export type SavedDish = {
   id: string;
@@ -21,6 +23,7 @@ export type SavedDish = {
   imageUrl: string | null;
   tags: string[];
   ingredientNames: string[];
+  rating: DishRating | null;
 };
 
 type RecipeCarouselProps = {
@@ -300,8 +303,9 @@ function RecipeCards({ dishes, todayIso, addDishAction, addTagAction, tagSuggest
                 </div>
                 <h2 className="break-words text-3xl font-extrabold leading-tight tracking-tight text-emerald-800 dark:text-emerald-300 md:text-xl">{dish.name}</h2>
                 {dish.description && <p className="text-sm text-slate-500 dark:text-slate-400">{dish.description}</p>}
-                {dish.tags.length > 0 && (
-                  <ul aria-label="Recipe tags" className="flex flex-wrap gap-2">
+                {(dish.rating || dish.tags.length > 0) && (
+                  <ul aria-label="Recipe rating and tags" className="flex flex-wrap items-center gap-2">
+                    {dish.rating && <li><DishRatingBadge rating={dish.rating} /></li>}
                     {dish.tags.map(tag => <li key={tag} className="break-words rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">{tag}</li>)}
                   </ul>
                 )}

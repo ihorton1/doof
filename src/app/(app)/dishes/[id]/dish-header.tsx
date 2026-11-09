@@ -8,6 +8,8 @@ import { type ChooseDishAction } from "@/lib/planning-days";
 import { type AddDishTagAction } from "@/lib/dish-tags";
 import { DayPicker } from "../../plan/day-picker";
 import { QuickTagPicker } from "../../plan/quick-tag-picker";
+import { DishRatingControl } from "@/components/dish-rating-control";
+import type { DishRating, SetDishRatingAction } from "@/lib/dish-ratings";
 
 export type DishHeaderData = {
   id: string;
@@ -17,14 +19,16 @@ export type DishHeaderData = {
   sourceUrl: string | null;
   imageUrl: string | null;
   tags: string[];
+  rating: DishRating | null;
 };
 
-export function DishHeader({ dish, todayIso, tagSuggestions, addDishAction, addTagAction }: {
+export function DishHeader({ dish, todayIso, tagSuggestions, addDishAction, addTagAction, setRatingAction }: {
   dish: DishHeaderData;
   todayIso: string;
   tagSuggestions: string[];
   addDishAction: ChooseDishAction;
   addTagAction: AddDishTagAction;
+  setRatingAction: SetDishRatingAction;
 }) {
   const [dialog, setDialog] = useState<"plan" | "tag" | null>(null);
   const [message, setMessage] = useState({ text: "", screenReaderOnly: false });
@@ -91,7 +95,7 @@ export function DishHeader({ dish, todayIso, tagSuggestions, addDishAction, addT
       <div
         className="flex items-start justify-between gap-3"
         onClickCapture={(event) => {
-          if (event.target instanceof Element && event.target.closest("a")) clicks.cancel();
+          if (event.target instanceof Element && event.target.closest("a, [data-rating-control]")) clicks.cancel();
         }}
       >
         <div className="min-w-0">
@@ -105,19 +109,18 @@ export function DishHeader({ dish, todayIso, tagSuggestions, addDishAction, addT
           {dish.sourceUrl && (
             <a href={dish.sourceUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block break-all text-sm text-emerald-600 hover:underline">Source</a>
           )}
-          {dish.tags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {dish.tags.map(tag => (
-                <Link
-                  key={tag}
-                  href={`/dishes?tag=${encodeURIComponent(tag)}`}
-                  className="inline-flex h-6 items-center rounded-full bg-emerald-100 px-2 text-xs font-medium text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800"
-                >
-                  {tag}
-                </Link>
-              ))}
-            </div>
-          )}
+          <div role="group" aria-label="Recipe rating and tags" className="mt-2 flex flex-wrap items-center gap-1.5">
+            <DishRatingControl dish={dish} setRatingAction={setRatingAction} />
+            {dish.tags.map(tag => (
+              <Link
+                key={tag}
+                href={`/dishes?tag=${encodeURIComponent(tag)}`}
+                className="inline-flex h-6 items-center rounded-full bg-emerald-100 px-2 text-xs font-medium text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-200 dark:hover:bg-emerald-800"
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           <Link href={`/dishes/${dish.id}/edit`} className={actionClassName} aria-label="Edit dish"><Pencil className="size-4" /></Link>

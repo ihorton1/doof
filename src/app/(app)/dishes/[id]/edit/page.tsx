@@ -42,6 +42,7 @@ export default async function EditDishPage({
           servings: dish.servings,
           sourceUrl: dish.sourceUrl,
           imageUrl: dish.imageUrl,
+          rating: dish.rating,
           ingredients: dish.ingredients.map((i) => ({
             name: i.name,
             quantity: i.quantity,

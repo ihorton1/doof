@@ -6,9 +6,9 @@ import { filterDishes, getDishSearchSuggestions } from "../src/lib/dish-search";
 import { DishList, type DishListItem } from "../src/app/(app)/dishes/dish-list";
 
 const dishes: DishListItem[] = [
-  { id: "curry", name: "Chickpea curry", ingredientNames: ["spinach", "garlic"], tags: ["quick", "vegetarian"], description: null, imageUrl: null, status: "Planned today" },
-  { id: "pasta", name: "Pasta", ingredientNames: ["chickpeas", "tomato"], tags: ["weeknight"], description: null, imageUrl: null, status: "Never cooked" },
-  { id: "soup", name: "Soup", ingredientNames: [], tags: ["chickpea"], description: null, imageUrl: null, status: "Never cooked" },
+  { id: "curry", name: "Chickpea curry", ingredientNames: ["spinach", "garlic"], tags: ["quick", "vegetarian"], description: null, imageUrl: null, status: "Planned today", rating: "yum" },
+  { id: "pasta", name: "Pasta", ingredientNames: ["chickpeas", "tomato"], tags: ["weeknight"], description: null, imageUrl: null, status: "Never cooked", rating: "eh" },
+  { id: "soup", name: "Soup", ingredientNames: [], tags: ["chickpea"], description: null, imageUrl: null, status: "Never cooked", rating: null },
 ];
 
 test("one query matches names, ingredients or tags without duplicate results", () => {
@@ -44,4 +44,23 @@ test("Dishes renders one accessible search without scope toggles", () => {
   assert.match(html, /placeholder="Search dishes, ingredients or tags\.\.\."/);
   assert.doesNotMatch(html, />Dish names<\/button>|>Ingredients<\/button>/);
   assert.match(html, /<option value="weeknight"/);
+  assert.equal((html.match(/aria-label="Rating:/g) ?? []).length, 2);
+  assert.match(html, /aria-label="Rating: yum"/);
+  assert.match(html, /aria-label="Rating: eh"/);
+  assert.doesNotMatch(html, /data-rating-control|Rate dish/);
+  assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+  assert.deepEqual(filterDishes(dishes, "yum"), []);
+  assert.match(html, /aria-label="Recipe rating and tags"[^>]*><span aria-label="Rating: yum"/);
+  assert.ok(html.indexOf("Rating: yum") < html.indexOf(">quick</span>"));
+});
+
+test("Dishes shows a rating-only row but no empty row for unrated, untagged recipes", () => {
+  const rated = renderToStaticMarkup(createElement(DishList, {
+    dishes: [{ ...dishes[0], tags: [] }],
+  }));
+  assert.match(rated, /aria-label="Recipe rating and tags"[^>]*><span aria-label="Rating: yum"/);
+  const unrated = renderToStaticMarkup(createElement(DishList, {
+    dishes: [{ ...dishes[0], rating: null, tags: [] }],
+  }));
+  assert.doesNotMatch(unrated, /Recipe rating and tags/);
 });

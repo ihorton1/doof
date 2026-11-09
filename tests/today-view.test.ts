@@ -20,6 +20,7 @@ function renderToday(entries: Entry[]) {
     prevFocusIso: "2026-10-29",
     nextFocusIso: "2026-10-31",
     addTagAction: async ({ tag }) => ({ status: "added", tag } as const),
+    setRatingAction: async ({ rating }) => ({ rating }),
     tagSuggestions: ["fast", "vegetarian", "lyse friendly"],
     leftovers: [],
     dismissLeftoversAction: async () => ({ status: "dismissed" } as const),
@@ -37,6 +38,7 @@ const dish: Entry = {
   id: "entry-1",
   dishId: "dish-1",
   dishName: "Crispy chilli eggs",
+  dishRating: null,
   dishImageUrl: "/api/dishes/dish-1/image",
   dishTags: ["fast", "vegetarian"],
   freeformText: null,
@@ -48,10 +50,36 @@ test("Today cards render separate photos, recipe headings and tag pills", () => 
   assert.match(html, /<article/);
   assert.match(html, /src="\/api\/dishes\/dish-1\/image"/);
   assert.match(html, /<h3><a[^>]*href="\/dishes\/dish-1"[^>]*>Crispy chilli eggs<\/a><\/h3>/);
-  assert.match(html, /aria-label="Recipe tags"/);
+  assert.match(html, /aria-label="Recipe rating and tags"/);
   assert.match(html, />fast<\/li>/);
   assert.match(html, />vegetarian<\/li>/);
   assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<a\b/);
+  assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+});
+
+test("saved meals offer editable ratings, with read-only badges inside linked adjacent days", () => {
+  const html = renderToday([{ ...dish, dishRating: "yum" }]);
+  assert.match(html, /aria-label="Change rating for Crispy chilli eggs: yum"/);
+  assert.match(html, /aria-label="Rating: yum"/);
+  assert.match(html, /data-rating-control="true"/);
+  assert.match(html, /<ul aria-label="Recipe rating and tags"[^>]*><li><div data-rating-control/);
+  assert.match(html, /<ul aria-label="Recipe rating and tags"[^>]*><li><span aria-label="Rating: yum"/);
+  assert.ok(html.indexOf("data-rating-control") < html.indexOf(">fast</li>"));
+  assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+  assert.doesNotMatch(html, /<dialog/);
+});
+
+test("unrated meals offer Rate dish, while freeform meals have no rating control", () => {
+  assert.match(renderToday([dish]), />Rate dish<\/span>/);
+  const html = renderToday([{ ...dish, dishId: null, dishName: null, dishTags: [], freeformText: "Takeaway" }]);
+  assert.doesNotMatch(html, /data-rating-control|Rating:|Rate dish/);
+  assert.doesNotMatch(html, /Recipe rating and tags/);
+});
+
+test("saved meals without tags retain their rating controls without empty tag rows in linked unrated cards", () => {
+  const html = renderToday([{ ...dish, dishTags: [] }]);
+  assert.match(html, /<ul aria-label="Recipe rating and tags"[^>]*><li><div data-rating-control/);
+  assert.doesNotMatch(html, /<ul aria-label="Recipe rating and tags"[^>]*><\/ul>/);
 });
 
 test("Today preserves multiple meals, freeform meals and skipped styling without images or tags", () => {

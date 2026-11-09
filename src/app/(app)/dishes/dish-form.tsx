@@ -6,6 +6,8 @@ import { Trash2, Plus } from "lucide-react";
 import { ImagePicker } from "./image-picker";
 import { TagPicker } from "./tag-picker";
 import { IngredientImporter } from "./ingredient-importer";
+import { DishRatingOptions } from "@/components/dish-rating-control";
+import type { DishRating } from "@/lib/dish-ratings";
 
 type Ingredient = {
   name: string;
@@ -22,6 +24,7 @@ type Initial = {
   imageUrl?: string | null;
   ingredients?: { name: string; quantity: string | null; unit: string | null }[];
   tags?: string[];
+  rating?: DishRating | null;
 };
 
 export function DishForm({
@@ -35,6 +38,7 @@ export function DishForm({
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [rating, setRating] = useState<DishRating | null>(initial?.rating ?? null);
   const [sourceUrl, setSourceUrl] = useState(initial?.sourceUrl ?? "");
   const [autoPreviewUrl, setAutoPreviewUrl] = useState(false);
   const [urlImportVersion, setUrlImportVersion] = useState(0);
@@ -160,6 +164,12 @@ export function DishForm({
           />
         </Field>
       </div>
+
+      <fieldset className="min-w-0">
+        <legend className="mb-2 text-sm font-medium">Rating (optional)</legend>
+        <input type="hidden" name="rating" value={rating ?? ""} />
+        <DishRatingOptions rating={rating} onChange={setRating} />
+      </fieldset>
 
       <fieldset className="min-w-0">
         <legend className="text-sm font-medium mb-1">Tags</legend>

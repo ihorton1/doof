@@ -9,6 +9,7 @@ const dish: SavedDish = {
   id: "dish-1", name: "Chilli eggs", description: "A quick dinner",
   imageUrl: "/api/dishes/dish-1/image", tags: ["quick", "vegetarian"],
   ingredientNames: ["eggs", "chilli flakes"],
+  rating: null,
 };
 
 function render(dishes: SavedDish[]) {
@@ -32,7 +33,7 @@ test("saved dishes render as snap carousel cards with accessible alternatives to
   assert.match(html, /snap-x snap-mandatory/);
   assert.equal((html.match(/aria-roledescription="slide"/g) ?? []).length, 2);
   assert.match(html, /Chilli eggs/);
-  assert.match(html, /aria-label="Recipe tags"/);
+  assert.match(html, /aria-label="Recipe rating and tags"/);
   assert.match(html, /href="\/dishes\/dish-1"/);
   assert.doesNotMatch(html, />Choose day<\/button>|>View recipe<\/a>/);
   assert.equal((html.match(/aria-keyshortcuts="Space t"/g) ?? []).length, 2);
@@ -42,6 +43,25 @@ test("saved dishes render as snap carousel cards with accessible alternatives to
   assert.doesNotMatch(html, />1<!-- --> \/ /);
   assert.doesNotMatch(html, /border-emerald|outline-emerald/);
   assert.doesNotMatch(html, /src="null"/);
+});
+
+test("Plan leads the tag list with a read-only rating without adding rating filters or nested controls", () => {
+  const html = render([{ ...dish, rating: "dud" }, { ...dish, id: "unrated" }]);
+  assert.equal((html.match(/aria-label="Rating: dud"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /data-rating-control|Rate dish/);
+  assert.doesNotMatch(html, /<a\b[^>]*>(?:(?!<\/a>)[\s\S])*<button\b/);
+  assert.doesNotMatch(html, /<option value="dud"/);
+  assert.ok(html.indexOf("Rating: dud") > html.indexOf("</h2>"));
+  assert.equal((html.match(/aria-roledescription="slide"/g) ?? []).length, 2);
+  assert.match(html, /<ul aria-label="Recipe rating and tags"[^>]*><li><span aria-label="Rating: dud"/);
+  assert.ok(html.indexOf("A quick dinner") < html.indexOf("Rating: dud"));
+  assert.ok(html.indexOf("Rating: dud") < html.indexOf(">quick</li>"));
+});
+
+test("Plan retains a rating-only row and omits the row when neither ratings nor tags exist", () => {
+  const rated = render([{ ...dish, rating: "yum", tags: [] }]);
+  assert.match(rated, /<ul aria-label="Recipe rating and tags"[^>]*><li><span aria-label="Rating: yum"/);
+  assert.doesNotMatch(render([{ ...dish, rating: null, tags: [] }]), /Recipe rating and tags/);
 });
 
 test("empty saved dishes link to dish creation without an empty carousel", () => {

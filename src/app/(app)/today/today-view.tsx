@@ -10,6 +10,9 @@ import { type AddDishTagAction } from "@/lib/dish-tags";
 import { QuickTagPicker } from "../plan/quick-tag-picker";
 import { type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
 import { LeftoversView } from "./leftovers-view";
+import { DishRatingControl } from "@/components/dish-rating-control";
+import { DishRatingBadge } from "@/components/dish-rating-badge";
+import type { DishRating, SetDishRatingAction } from "@/lib/dish-ratings";
 
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -26,6 +29,7 @@ type Day = {
     id: string;
     dishId: string | null;
     dishName: string | null;
+    dishRating: DishRating | null;
     dishTags: string[];
     dishImageUrl: string | null;
     freeformText: string | null;
@@ -41,6 +45,7 @@ export function TodayView({
   prevFocusIso,
   nextFocusIso,
   addTagAction,
+  setRatingAction,
   tagSuggestions,
   leftovers,
   dismissLeftoversAction,
@@ -51,6 +56,7 @@ export function TodayView({
   prevFocusIso: string;
   nextFocusIso: string;
   addTagAction: AddDishTagAction;
+  setRatingAction: SetDishRatingAction;
   tagSuggestions: string[];
   leftovers: Leftover[];
   dismissLeftoversAction: DismissLeftoversAction;
@@ -74,6 +80,7 @@ export function TodayView({
 
   function getDish(target: EventTarget) {
     if (!(target instanceof Element)) return null;
+    if (target.closest("[data-rating-control]")) return null;
     const id = target.closest<HTMLElement>("[data-tag-dish]")?.dataset.tagDish;
     const entry = days.flatMap(day => day.entries).find(entry => entry.dishId === id);
     return entry?.dishId
@@ -113,13 +120,14 @@ export function TodayView({
     >
       <p id="today-tag-help" className="sr-only">Triple-tap a dish to add a tag. Keyboard: focus a meal card and press T.</p>
       <p role="status" className="sr-only">{message}</p>
-      <MobileCarousel days={days} focusIso={focusIso} />
+      <MobileCarousel days={days} focusIso={focusIso} setRatingAction={setRatingAction} />
 
       <DesktopRow
         days={days}
         focusIso={focusIso}
         prevFocusIso={prevFocusIso}
         nextFocusIso={nextFocusIso}
+        setRatingAction={setRatingAction}
       />
       <LeftoversView
         leftovers={leftovers}
@@ -143,7 +151,7 @@ export function TodayView({
   );
 }
 
-function MobileCarousel({ days, focusIso }: { days: Day[]; focusIso: string }) {
+function MobileCarousel({ days, focusIso, setRatingAction }: { days: Day[]; focusIso: string; setRatingAction: SetDishRatingAction }) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const focusRef = useRef<HTMLDivElement | null>(null);
 
@@ -205,7 +213,7 @@ function MobileCarousel({ days, focusIso }: { days: Day[]; focusIso: string }) {
             ref={day.iso === focusIso ? focusRef : undefined}
             className="snap-center shrink-0 w-[86vw] h-[calc(100svh-11rem)] min-h-[26rem] max-h-[52rem]"
           >
-            <DayCard day={day} emphasized={day.iso === focusIso} />
+            <DayCard day={day} emphasized={day.iso === focusIso} setRatingAction={setRatingAction} />
           </div>
         ))}
       </div>
@@ -218,11 +226,13 @@ function DesktopRow({
   focusIso,
   prevFocusIso,
   nextFocusIso,
+  setRatingAction,
 }: {
   days: Day[];
   focusIso: string;
   prevFocusIso: string;
   nextFocusIso: string;
+  setRatingAction: SetDishRatingAction;
 }) {
   const focusIdx = days.findIndex((d) => d.iso === focusIso);
   const prev = days[focusIdx - 1];
@@ -235,9 +245,9 @@ function DesktopRow({
         <PagerButton href={`/today?d=${prevFocusIso}`} dir="prev" />
 
         <div className="min-w-0 flex-1 grid grid-cols-[1fr_1.4fr_1fr] gap-3 items-stretch h-[calc(100svh-11rem)] min-h-[26rem] max-h-[52rem]">
-          {prev ? <DayCardLink day={prev} dim /> : <div />}
-          <DayCard day={focus} emphasized />
-          {next ? <DayCardLink day={next} dim /> : <div />}
+          {prev ? <DayCardLink day={prev} dim setRatingAction={setRatingAction} /> : <div />}
+          <DayCard day={focus} emphasized setRatingAction={setRatingAction} />
+          {next ? <DayCardLink day={next} dim setRatingAction={setRatingAction} /> : <div />}
         </div>
 
         <PagerButton href={`/today?d=${nextFocusIso}`} dir="next" />
@@ -262,7 +272,7 @@ function PagerButton({ href, dir }: { href: string; dir: "prev" | "next" }) {
   );
 }
 
-function DayCardLink({ day, dim }: { day: Day; dim?: boolean }) {
+function DayCardLink({ day, dim, setRatingAction }: { day: Day; dim?: boolean; setRatingAction: SetDishRatingAction }) {
   return (
     <Link
       href={`/today?d=${day.iso}`}
@@ -271,7 +281,7 @@ function DayCardLink({ day, dim }: { day: Day; dim?: boolean }) {
         dim && "opacity-60 hover:opacity-100",
       )}
     >
-      <DayCard day={day} inLink />
+      <DayCard day={day} inLink setRatingAction={setRatingAction} />
     </Link>
   );
 }
@@ -280,10 +290,12 @@ function DayCard({
   day,
   emphasized,
   inLink,
+  setRatingAction,
 }: {
   day: Day;
   emphasized?: boolean;
   inLink?: boolean;
+  setRatingAction: SetDishRatingAction;
 }) {
   return (
     <div className="relative min-w-0 h-full flex flex-col gap-3">
@@ -312,7 +324,7 @@ function DayCard({
         )}
       >
         {day.entries.length > 0 ? (
-          <PlannedMeals day={day} inLink={inLink} emphasized={emphasized} />
+          <PlannedMeals day={day} inLink={inLink} emphasized={emphasized} setRatingAction={setRatingAction} />
         ) : (
           <EmptyMeal day={day} inLink={inLink} />
         )}
@@ -325,15 +337,18 @@ function PlannedMeals({
   day,
   inLink,
   emphasized,
+  setRatingAction,
 }: {
   day: Day;
   inLink?: boolean;
   emphasized?: boolean;
+  setRatingAction: SetDishRatingAction;
 }) {
   return (
     <>
       {day.entries.map((entry) => {
         const title = entry.dishName ?? entry.freeformText ?? "—";
+        const showRating = Boolean(entry.dishId) && (!inLink || entry.dishRating !== null);
         const titleClassName = cn(
           headingClassName,
           entry.status === "skipped" && "line-through opacity-60",
@@ -380,8 +395,20 @@ function PlannedMeals({
               )}
             </div>
             <h3>{titleNode}</h3>
-            {entry.dishTags.length > 0 && (
-              <ul aria-label="Recipe tags" className="flex flex-wrap gap-2 pb-1">
+            {(showRating || entry.dishTags.length > 0) && (
+              <ul aria-label="Recipe rating and tags" className="flex flex-wrap items-center gap-2 pb-1">
+                {showRating && entry.dishId && (
+                  <li>
+                    {inLink ? (
+                      <DishRatingBadge rating={entry.dishRating} />
+                    ) : (
+                      <DishRatingControl
+                        dish={{ id: entry.dishId, name: title, rating: entry.dishRating }}
+                        setRatingAction={setRatingAction}
+                      />
+                    )}
+                  </li>
+                )}
                 {entry.dishTags.map((tag) => (
                   <li
                     key={tag}
