@@ -4,6 +4,8 @@ import { addDays, toISODate, fromISODate } from "@/lib/utils";
 import { TodayView } from "./today-view";
 import { getTagSuggestions } from "@/lib/tag-suggestions";
 import { addDishTag } from "../plan/add-dish-tag";
+import { getLeftovers, getLeftoverWindow } from "@/lib/leftovers";
+import { dismissLeftovers } from "./dismiss-leftovers";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function TodayPage({
   const rangeStart = addDays(focus, -half);
   const rangeEnd = addDays(focus, half + 1);
 
-  const [entries, dishIdsWithImages, tagSuggestions] = await Promise.all([
+  const [entries, dishIdsWithImages, tagSuggestions, leftoverEntries] = await Promise.all([
     prisma.mealPlanEntry.findMany({
       where: {
         mealSlot: "dinner",
@@ -46,6 +48,23 @@ export default async function TodayPage({
     }),
     getDishIdsWithImages(),
     getTagSuggestions(),
+    prisma.mealPlanEntry.findMany({
+      where: {
+        mealSlot: "dinner",
+        date: getLeftoverWindow(realTodayIso),
+        status: { not: "skipped" },
+        dishId: { not: null },
+        leftoversDismissed: false,
+      },
+      select: {
+        id: true,
+        date: true,
+        mealSlot: true,
+        status: true,
+        leftoversDismissed: true,
+        dish: { select: { id: true, name: true, updatedAt: true } },
+      },
+    }),
   ]);
 
   const byDate = new Map<string, typeof entries>();
@@ -88,6 +107,14 @@ export default async function TodayPage({
       nextFocusIso={toISODate(addDays(focus, 1))}
       addTagAction={addDishTag}
       tagSuggestions={tagSuggestions}
+      leftovers={getLeftovers(leftoverEntries.map((entry) => ({
+        ...entry,
+        dishImageUrl: entry.dish && dishIdsWithImages.has(entry.dish.id)
+          ? dishImagePath(entry.dish.id, entry.dish.updatedAt)
+          : null,
+      })), realTodayIso)}
+      dismissLeftoversAction={dismissLeftovers}
+      leftoversRefreshAt={addDays(realToday, 1).getTime()}
     />
   );
 }

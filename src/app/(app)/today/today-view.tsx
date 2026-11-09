@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { createRecipeClicks } from "@/lib/recipe-clicks";
 import { type AddDishTagAction } from "@/lib/dish-tags";
 import { QuickTagPicker } from "../plan/quick-tag-picker";
+import { type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
+import { LeftoversView } from "./leftovers-view";
 
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -40,6 +42,9 @@ export function TodayView({
   nextFocusIso,
   addTagAction,
   tagSuggestions,
+  leftovers,
+  dismissLeftoversAction,
+  leftoversRefreshAt,
 }: {
   days: Day[];
   focusIso: string;
@@ -47,6 +52,9 @@ export function TodayView({
   nextFocusIso: string;
   addTagAction: AddDishTagAction;
   tagSuggestions: string[];
+  leftovers: Leftover[];
+  dismissLeftoversAction: DismissLeftoversAction;
+  leftoversRefreshAt: number;
 }) {
   const router = useRouter();
   const [tagging, setTagging] = useState<TaggingDish | null>(null);
@@ -112,6 +120,11 @@ export function TodayView({
         focusIso={focusIso}
         prevFocusIso={prevFocusIso}
         nextFocusIso={nextFocusIso}
+      />
+      <LeftoversView
+        leftovers={leftovers}
+        dismissAction={dismissLeftoversAction}
+        refreshAt={leftoversRefreshAt}
       />
       {tagging && (
         <QuickTagPicker
@@ -284,7 +297,7 @@ function DayCard({
         role={day.entries.length > 0 ? "region" : undefined}
         aria-label={day.entries.length > 0 ? `${day.label} meals` : undefined}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain no-scrollbar focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-emerald-500",
+          "min-h-0 flex-1 overflow-y-auto no-scrollbar focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-emerald-500",
           day.entries.length > 0
             ? "grid gap-4 snap-y snap-proximity rounded-[2rem]"
             : cn(

@@ -65,6 +65,7 @@ model MealPlanEntry {
   freeformText  String?
   status        String   @default("planned") // planned | cooked | skipped
   cookedAt      DateTime?
+  leftoversDismissed Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

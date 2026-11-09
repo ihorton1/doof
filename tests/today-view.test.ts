@@ -21,6 +21,9 @@ function renderToday(entries: Entry[]) {
     nextFocusIso: "2026-10-31",
     addTagAction: async ({ tag }) => ({ status: "added", tag } as const),
     tagSuggestions: ["fast", "vegetarian", "lyse friendly"],
+    leftovers: [],
+    dismissLeftoversAction: async () => ({ status: "dismissed" } as const),
+    leftoversRefreshAt: new Date("2026-10-31").getTime(),
   });
   return renderToStaticMarkup(createElement(AppRouterContext.Provider, {
     value: {
@@ -102,6 +105,13 @@ test("single meals fill the available carousel height", () => {
   const html = renderToday([dish]);
   assert.match(html, /auto-rows-\[minmax\(100%,auto\)\]/);
   assert.doesNotMatch(html, /auto-rows-\[minmax\(90%,auto\)\]/);
+});
+
+test("leftovers appear below both recipe layouts rather than inside the day carousel", () => {
+  const html = renderToday([dish]);
+  assert.ok(html.indexOf('id="leftovers-heading"') > html.lastIndexOf('aria-label="Next day"'));
+  assert.match(html, /No leftovers to keep track of/);
+  assert.doesNotMatch(html, /overscroll-y-contain/);
 });
 
 test("all day labels share the recipe titles' bold emerald typography", () => {
