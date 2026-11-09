@@ -6,7 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState, type MouseEvent } from "re
 import { Search, UtensilsCrossed } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getDishSearchSuggestions } from "@/lib/dish-search";
-import { filterPlanDishes, type PlanFilter } from "@/lib/plan-dish-filters";
+import { filterPlanDishes, getPopularPlanTags, type PlanFilter } from "@/lib/plan-dish-filters";
 import { type ChooseDishAction } from "@/lib/planning-days";
 import { type AddDishTagAction } from "@/lib/dish-tags";
 import { createRecipeClicks } from "@/lib/recipe-clicks";
@@ -41,8 +41,7 @@ export function RecipeCarousel({ dishes, todayIso, addDishAction, addTagAction, 
   const suggestionsId = useId();
   const errorId = useId();
   const suggestions = useMemo(() => getDishSearchSuggestions(dishes), [dishes]);
-  const tags = [...new Set(dishes.flatMap(dish => dish.tags))]
-    .sort((a, b) => a.localeCompare(b));
+  const tags = useMemo(() => getPopularPlanTags(dishes), [dishes]);
   const filtered = filterPlanDishes(dishes, tagFilters, queries);
 
   function excludeFilter(current: PlanFilter[], value: string): PlanFilter[] {

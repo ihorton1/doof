@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { toISODate } from "@/lib/utils";
-import { rankPlanDishes } from "@/lib/plan-recommendations";
+import { getMostPlannedDishes, rankPlanDishes } from "@/lib/plan-recommendations";
 import { getTagSuggestions } from "@/lib/tag-suggestions";
 import { RecipeCarousel } from "./recipe-carousel";
 import { chooseDish } from "./choose-dish";
 import { addDishTag } from "./add-dish-tag";
+import { MostCookedMeals } from "./most-cooked-meals";
 
 export async function SavedDishes() {
   const todayIso = toISODate(new Date());
@@ -23,31 +24,35 @@ export async function SavedDishes() {
     }),
     getDishIdsWithImages(),
     prisma.mealPlanEntry.findMany({
-      where: { dishId: { not: null }, status: { not: "skipped" } },
+      where: { dishId: { not: null } },
       select: { dishId: true, date: true, status: true },
     }),
     getTagSuggestions(),
   ]);
+  const savedDishes = dishes.map(dish => ({
+    id: dish.id,
+    name: dish.name,
+    description: dish.description,
+    imageUrl: images.has(dish.id) ? dishImagePath(dish.id, dish.updatedAt) : null,
+    tags: dish.tags.map(({ tag }) => tag.name),
+    ingredientNames: dish.ingredients.map(ingredient => ingredient.name),
+  }));
   const recommendations = rankPlanDishes(
-    dishes,
+    savedDishes,
     history.map(entry => ({ ...entry, date: toISODate(entry.date) })),
     todayIso,
   );
 
   return (
-    <RecipeCarousel
-      todayIso={todayIso}
-      addDishAction={chooseDish}
-      addTagAction={addDishTag}
-      tagSuggestions={tagSuggestions}
-      dishes={recommendations.map(dish => ({
-        id: dish.id,
-        name: dish.name,
-        description: dish.description,
-        imageUrl: images.has(dish.id) ? dishImagePath(dish.id, dish.updatedAt) : null,
-        tags: dish.tags.map(({ tag }) => tag.name),
-        ingredientNames: dish.ingredients.map(ingredient => ingredient.name),
-      }))}
-    />
+    <>
+      <RecipeCarousel
+        todayIso={todayIso}
+        addDishAction={chooseDish}
+        addTagAction={addDishTag}
+        tagSuggestions={tagSuggestions}
+        dishes={recommendations}
+      />
+      <MostCookedMeals dishes={getMostPlannedDishes(savedDishes, history)} />
+    </>
   );
 }

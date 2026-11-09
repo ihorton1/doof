@@ -6,6 +6,22 @@ type PlanHistory = {
   status: string;
 };
 
+export function getMostPlannedDishes<T extends { id: string; name: string }>(
+  dishes: T[],
+  history: Pick<PlanHistory, "dishId">[],
+): (T & { planCount: number })[] {
+  const counts = new Map<string, number>();
+  for (const entry of history) {
+    if (entry.dishId) counts.set(entry.dishId, (counts.get(entry.dishId) ?? 0) + 1);
+  }
+  return dishes
+    .map(dish => ({ ...dish, planCount: counts.get(dish.id) ?? 0 }))
+    .filter(dish => dish.planCount > 0)
+    .sort((a, b) => b.planCount - a.planCount ||
+      a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
+    .slice(0, 10);
+}
+
 function dailyOrder(day: string, id: string): number {
   let hash = 2166136261;
   for (const character of `${day}:${id}`) {

@@ -69,15 +69,29 @@ test("carousel keyboard focus underlines titles instead of outlining card edges"
   assert.equal((html.match(/data-active="false"/g) ?? []).length, 1);
 });
 
-test("Plan offers available tags once, alphabetically, with no tag selected initially", () => {
-  const html = render([dish, { ...dish, id: "dish-2", tags: ["quick", "weeknight"] }]);
+test("Plan offers tag shortcuts by recipe frequency, with alphabetical ties and none selected initially", () => {
+  const html = render([dish, { ...dish, id: "dish-2", tags: ["weeknight", "vegetarian"] }]);
   assert.match(html, /aria-label="Filter recipes by tag"/);
   const buttons = [...html.matchAll(/<button[^>]*aria-label="([^"]*)"[^>]*aria-pressed="(true|false)"[^>]*>/g)];
   assert.deepEqual(buttons.map(([, label, pressed]) => ({ pressed, label })), [
-    { pressed: "false", label: "quick" },
     { pressed: "false", label: "vegetarian" },
+    { pressed: "false", label: "quick" },
     { pressed: "false", label: "weeknight" },
   ]);
+});
+
+test("Plan renders only ten popular tag shortcuts without removing other tags from search or recipes", () => {
+  const html = render(Array.from({ length: 12 }, (_, index) => ({
+    ...dish,
+    id: `dish-${index}`,
+    tags: [`tag-${String(index).padStart(2, "0")}`, "popular"],
+  })));
+  const buttons = [...html.matchAll(/<button[^>]*aria-label="([^"]*)"[^>]*aria-pressed="false"[^>]*>/g)];
+  assert.deepEqual(buttons.map(([, label]) => label), [
+    "popular", ...Array.from({ length: 9 }, (_, index) => `tag-${String(index).padStart(2, "0")}`),
+  ]);
+  assert.match(html, /<option value="tag-11"/);
+  assert.match(html, /<li[^>]*>tag-11<\/li>/);
 });
 
 test("Plan does not show empty tag controls when no recipes have tags", () => {

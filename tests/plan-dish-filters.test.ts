@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { filterPlanDishes, type PlanFilter } from "../src/lib/plan-dish-filters";
+import { filterPlanDishes, getPopularPlanTags, type PlanFilter } from "../src/lib/plan-dish-filters";
 
 const include = (...values: string[]): PlanFilter[] => values.map(value => ({ value, exclude: false }));
 const exclude = (...values: string[]): PlanFilter[] => values.map(value => ({ value, exclude: true }));
@@ -11,6 +11,33 @@ const dishes = [
   { id: "soup", name: "Soup", ingredientNames: ["garlic"], tags: ["chickpea", "weeknight"] },
   { id: "bread", name: "Bread", ingredientNames: [], tags: [] },
 ];
+
+test("popular Plan tags count recipes and rank by frequency, with alphabetical ties", () => {
+  const tagged = [
+    { tags: ["zesty", "zesty", "zesty", "quick"] },
+    { tags: ["vegetarian", "quick"] },
+    { tags: ["vegetarian", "weeknight", "quick"] },
+  ];
+  const before = structuredClone(tagged);
+  assert.deepEqual(getPopularPlanTags(tagged), ["quick", "vegetarian", "weeknight", "zesty"]);
+  assert.deepEqual(getPopularPlanTags([...tagged].reverse()), ["quick", "vegetarian", "weeknight", "zesty"]);
+  assert.deepEqual(tagged, before);
+});
+
+test("Plan limits tag shortcuts to the ten most common tags across all saved recipes", () => {
+  const tagged = Array.from({ length: 12 }, (_, index) => ({
+    tags: [`tag-${String(index).padStart(2, "0")}`, "popular"],
+  }));
+  assert.deepEqual(getPopularPlanTags(tagged), [
+    "popular", ...Array.from({ length: 9 }, (_, index) => `tag-${String(index).padStart(2, "0")}`),
+  ]);
+});
+
+test("Plan shows fewer than ten shortcuts when fewer tags exist, and none without tags", () => {
+  assert.deepEqual(getPopularPlanTags([{ tags: ["quick"] }, { tags: ["quick"] }]), ["quick"]);
+  assert.deepEqual(getPopularPlanTags([{ tags: [] }]), []);
+  assert.deepEqual(getPopularPlanTags([]), []);
+});
 
 test("each ad hoc filter matches a title, ingredient or tag", () => {
   assert.deepEqual(filterPlanDishes(dishes, [], include("chickpea")).map(dish => dish.id), ["curry", "pasta", "soup"]);

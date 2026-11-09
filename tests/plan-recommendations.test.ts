@@ -1,12 +1,61 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { rankPlanDishes } from "../src/lib/plan-recommendations";
+import { getMostPlannedDishes, rankPlanDishes } from "../src/lib/plan-recommendations";
 
 const today = "2026-10-30";
 type Entry = Parameters<typeof rankPlanDishes>[1][number];
 const entry = (dishId: string | null, date: string, status = "planned"): Entry => ({ dishId, date, status });
 const dishes = (...ids: string[]) => ids.map(id => ({ id, name: id }));
 const ids = (result: { id: string }[]) => result.map(dish => dish.id);
+
+test("Most cooked counts every plan occurrence, including future dates and any stored status", () => {
+  const recipes = dishes("frequent", "other", "never");
+  const history = [
+    entry("frequent", "2020-01-01"),
+    entry("frequent", today),
+    entry("frequent", "2030-01-01", "skipped"),
+    entry("frequent", "2030-01-01", "cooked"),
+    entry("other", "2026-10-01"),
+    entry(null, "2026-10-01"),
+    entry("deleted", "2026-10-01"),
+  ];
+  assert.deepEqual(getMostPlannedDishes(recipes, history), [
+    { id: "frequent", name: "frequent", planCount: 4 },
+    { id: "other", name: "other", planCount: 1 },
+  ]);
+});
+
+test("Most cooked returns at most ten meals and resolves ties by name then ID", () => {
+  const recipes = Array.from({ length: 12 }, (_, index) => ({
+    id: `dish-${String(index).padStart(2, "0")}`,
+    name: index < 2 ? "A shared name" : `Meal ${String(index).padStart(2, "0")}`,
+  }));
+  const history = recipes.map(dish => entry(dish.id, today));
+  const top = getMostPlannedDishes([...recipes].reverse(), [...history].reverse());
+  assert.equal(top.length, 10);
+  assert.deepEqual(ids(top), recipes.slice(0, 10).map(dish => dish.id));
+});
+
+test("Most cooked preserves recipe metadata without mutating recipes or history", () => {
+  const recipes = [{ id: "soup", name: "Soup", imageUrl: "/soup.jpg", tags: ["quick"] }];
+  const history = [entry("soup", today)];
+  const before = structuredClone({ recipes, history });
+  assert.deepEqual(getMostPlannedDishes(recipes, history), [{ ...recipes[0], planCount: 1 }]);
+  assert.deepEqual({ recipes, history }, before);
+  assert.deepEqual(getMostPlannedDishes(recipes, []), []);
+  assert.deepEqual(getMostPlannedDishes([], history), []);
+});
+
+test("loading all statuses for Most cooked leaves carousel recommendations unchanged", () => {
+  const recipes = dishes("a", "b", "c");
+  const history = [
+    entry("a", "2026-10-01"), entry("b", today), entry("c", "2026-10-29", "skipped"),
+  ];
+  assert.deepEqual(
+    rankPlanDishes(recipes, history, today),
+    rankPlanDishes(recipes, history.filter(entry => entry.status !== "skipped"), today),
+  );
+});
 
 test("eligible favourites lead, cooldown dishes follow, and upcoming dishes come last", () => {
   const result = rankPlanDishes(dishes("recent", "untried", "favourite", "upcoming"), [

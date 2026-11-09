@@ -88,6 +88,12 @@ The popup heading shows only the date, without the meal-slot label.
 Photos cover a positioned frame within an explicitly sized card link, avoiding
 percentage-height sizing differences in Safari's flex layout.
 Keyboard focus underlines the recipe title instead of outlining the card edges.
+Scroll below the Plan carousel for **Most cooked**, a thumbnail list of the ten
+saved recipes added to the meal plan most often. Each plan entry counts once,
+across all past and future dates, regardless of any stored cooked/skipped status.
+Only recipes with at least one plan entry appear; ties sort by recipe name then
+ID. Each row shows its count and opens the recipe. This list is independent of
+the carousel's tag/search filters and recommendation order.
 Suggestions use past, non-skipped plan dates as a proxy for cooking history.
 Dishes planned in the previous 14 days appear after eligible suggestions;
 dishes scheduled for today or any future date appear last. Eligible familiar
@@ -97,7 +103,11 @@ available. Older history still distinguishes tried from untried recipes.
 Ties use a deterministic daily shuffle, so unchanged data gives the same order
 throughout the day. Cooldown dishes are oldest-planned first. Every saved dish
 remains accessible; short pools are filled from the remaining recipes.
-Tag chips above the carousel filter recipes by any selected tags. Tapping a
+Tag chips above the carousel show the ten tags used on the most saved recipes,
+ordered by recipe count (alphabetically for ties), or all tags if fewer than ten
+exist. Counts use the full saved-recipe collection, not the current filtered
+results. Other tags remain available through the search field and tagging
+autocomplete. Tag chips filter recipes by any selected tags. Tapping a
 selected tag again clears that filter. Changing tags starts at the first
 matching recipe and cancels any pending single-tap navigation.
 The search field adds temporary, removable filter chips with **Add filter** or
