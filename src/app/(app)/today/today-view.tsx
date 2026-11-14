@@ -309,7 +309,7 @@ function DayCard({
         role={day.entries.length > 0 ? "region" : undefined}
         aria-label={day.entries.length > 0 ? `${day.label} meals` : undefined}
         className={cn(
-          "min-h-0 flex-1 overflow-y-auto no-scrollbar focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-emerald-500",
+          "min-h-0 flex-1 overflow-y-auto [contain:layout_paint] no-scrollbar focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-emerald-500",
           day.entries.length > 0
             ? "grid gap-4 snap-y snap-proximity rounded-[2rem]"
             : cn(

@@ -25,7 +25,9 @@ days on mobile, or use adjacent-day cards and arrows on desktop. Day labels are
 centred above the cards in the same bold emerald typography as recipe titles,
 without a duplicate ISO date. Each meal has its own box;
 days with multiple meals use a vertical snap carousel with a peek of the next
-card. Longer titles and tags remain accessible by scrolling.
+card. Longer titles and tags remain accessible by scrolling. Each meal scroller
+contains its layout and paint overflow so scrolling past the final card continues
+down the page to Leftovers rather than scrolling the horizontal carousel vertically.
 Triple-tap any saved-dish card to add a persistent recipe tag using the same
 autocomplete as Plan, or focus a meal card and press **T**. Freeform meals cannot
 be tagged. Single taps retain recipe-title and adjacent-day navigation, with a

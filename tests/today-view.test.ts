@@ -117,6 +117,17 @@ test("multiple meals have individual snap cards and leave room for the next-card
   assert.match(html, /<article aria-label="Soup"/);
 });
 
+test("meal scroll regions contain layout and paint so scrolling can reach leftovers", () => {
+  const html = renderToday([dish, { ...dish, id: "entry-2", dishName: "Soup" }]);
+  const regions = [...html.matchAll(/role="region" aria-label="[^"]+ meals" class="([^"]+)"/g)];
+  assert.equal(regions.length, 4);
+  for (const [, classes] of regions) {
+    assert.ok(classes.split(" ").includes("[contain:layout_paint]"));
+    assert.ok(classes.split(" ").includes("overflow-y-auto"));
+  }
+  assert.doesNotMatch(html, /overscroll-y-(?:contain|none)/);
+});
+
 test("saved dishes offer triple-tap tagging and a keyboard alternative without tagging freeform meals", () => {
   const html = renderToday([
     dish,
