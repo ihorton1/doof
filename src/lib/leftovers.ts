@@ -1,6 +1,7 @@
 import { addDays, fromISODate, toISODate } from "./utils";
 
 export const LEFTOVER_DAYS = 4;
+export const LEFTOVER_RETENTION_DAYS = 10;
 
 export type Leftover = {
   entryId: string;
@@ -28,11 +29,11 @@ type LeftoverEntry = {
 
 export function getLeftoverWindow(todayIso: string) {
   const today = fromISODate(todayIso);
-  return { gte: addDays(today, -LEFTOVER_DAYS), lt: today };
+  return { gte: addDays(today, -LEFTOVER_RETENTION_DAYS), lt: today };
 }
 
 export function getLeftovers(entries: LeftoverEntry[], todayIso: string): Leftover[] {
-  const dates = Array.from({ length: LEFTOVER_DAYS }, (_, index) =>
+  const dates = Array.from({ length: LEFTOVER_RETENTION_DAYS }, (_, index) =>
     toISODate(addDays(fromISODate(todayIso), -(index + 1))),
   );
   return entries.flatMap((entry) => {
@@ -47,7 +48,7 @@ export function getLeftovers(entries: LeftoverEntry[], todayIso: string): Leftov
       dishImageUrl: entry.dishImageUrl,
       plannedDate,
       day,
-      daysRemaining: LEFTOVER_DAYS - day + 1,
+      daysRemaining: Math.max(0, LEFTOVER_DAYS - day + 1),
     }];
   }).sort((a, b) => b.day - a.day || a.entryId.localeCompare(b.entryId));
 }

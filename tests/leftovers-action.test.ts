@@ -6,7 +6,7 @@ import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { RequestCookiesAdapter } from "next/dist/server/web/spec-extension/adapters/request-cookies";
 import { createSessionCookieValue, SESSION_COOKIE_NAME } from "../src/lib/auth";
 import { getLeftoverWindow } from "../src/lib/leftovers";
-import { toISODate } from "../src/lib/utils";
+import { addDays, fromISODate, toISODate } from "../src/lib/utils";
 import type { Prisma } from "../src/generated/prisma/client";
 
 async function setup(t: TestContext, authenticated = true) {
@@ -79,7 +79,18 @@ test("dismissal persists only the occurrence flag and revalidates Today; repeat 
   assert.equal(update.mock.callCount(), 2);
 });
 
-test("missing, expired or ineligible meals do not report a successful dismissal", async (t) => {
+test("expired leftovers remain dismissible within the ten-day retention window", async (t) => {
+  const { update, dismissLeftovers } = await setup(t);
+  const today = fromISODate(toISODate(new Date()));
+  update.mock.mockImplementation(async (args) => {
+    assert.deepEqual(args.where?.date, { gte: addDays(today, -10), lt: today });
+    return { count: 1 };
+  });
+  assert.deepEqual(await dismissLeftovers({ entryId: "expired-leftover" }), { status: "dismissed" });
+  assert.equal(update.mock.callCount(), 1);
+});
+
+test("missing, older than ten days or ineligible meals do not report a successful dismissal", async (t) => {
   const { update, revalidate, dismissLeftovers } = await setup(t);
   update.mock.mockImplementation(async () => ({ count: 0 }));
   assert.deepEqual(await dismissLeftovers({ entryId: "expired" }), {

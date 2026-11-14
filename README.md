@@ -35,9 +35,13 @@ be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
 
 Scroll past the last recipe card to reach **Leftovers** below Today's recipes.
 Saved recipes planned for
-the previous four calendar days appear automatically (except skipped meals),
+the previous ten calendar days appear automatically (except skipped meals),
 with the oldest first. Yesterday is day 1 (green, four days left), followed by
-yellow, orange and red (day 4, last day); they disappear on day 5. This always
+yellow, orange and red (day 4, last fresh day). On days 5-10, the color bar is
+replaced with a vomiting emoji and an **Expired** label; the recipe remains
+dismissible and disappears automatically on day 11. Meals that had already
+expired under the old four-day window stay hidden when this change is applied.
+This always
 uses the real current date, even while browsing another day, and refreshes at
 midnight. Separate occurrences of the same recipe are tracked independently.
 Each bar shows its planned date underneath, alongside the remaining time.

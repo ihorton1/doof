@@ -32,6 +32,7 @@ test("the four past calendar days have four, three, two and one days remaining",
   assert.deepEqual(leftovers.map(({ entryId, day, daysRemaining }) => ({
     entryId, day, daysRemaining,
   })), [
+    { entryId: "expired", day: 5, daysRemaining: 0 },
     { entryId: "four-days", day: 4, daysRemaining: 1 },
     { entryId: "three-days", day: 3, daysRemaining: 2 },
     { entryId: "two-days", day: 2, daysRemaining: 3 },
@@ -67,20 +68,56 @@ test("date windows cross month, year and daylight saving boundaries by calendar 
     ["2026-11-02", "2026-10-29"],
     ["2028-03-02", "2028-02-27"],
   ]) {
-    const window = getLeftoverWindow(today);
-    assert.equal(toISODate(window.gte), oldest);
-    assert.equal(toISODate(window.lt), today);
     assert.equal(getLeftovers([entry("oldest", oldest)], today)[0].day, 4);
   }
 });
 
-test("yesterday advances and the fourth past day falls off at the next midnight", () => {
+test("the ten-day query window crosses calendar and daylight saving boundaries", () => {
+  for (const [today, oldest] of [
+    ["2027-01-02", "2026-12-23"],
+    ["2026-03-30", "2026-03-20"],
+    ["2026-11-02", "2026-10-23"],
+    ["2028-03-02", "2028-02-21"],
+  ]) {
+    const window = getLeftoverWindow(today);
+    assert.equal(toISODate(window.gte), oldest);
+    assert.equal(toISODate(window.lt), today);
+    assert.equal(getLeftovers([entry("oldest", oldest)], today)[0].day, 10);
+  }
+});
+
+test("yesterday advances and the fourth past day becomes expired at midnight", () => {
   const entries = [entry("oldest", "2026-11-05"), entry("newest", "2026-11-08")];
   assert.equal(getLeftovers(entries, "2026-11-09").length, 2);
   const nextDay = getLeftovers(entries, "2026-11-10");
-  assert.equal(nextDay.length, 1);
-  assert.equal(nextDay[0].day, 2);
-  assert.equal(nextDay[0].daysRemaining, 3);
+  assert.deepEqual(nextDay.map(({ entryId, day, daysRemaining }) => ({
+    entryId, day, daysRemaining,
+  })), [
+    { entryId: "oldest", day: 5, daysRemaining: 0 },
+    { entryId: "newest", day: 2, daysRemaining: 3 },
+  ]);
+});
+
+test("expired leftovers stay through day ten and fall off on day eleven", () => {
+  const entries = [
+    entry("ten-days", "2026-10-30"),
+    entry("too-old", "2026-10-29"),
+    entry("five-days", "2026-11-04"),
+  ];
+  assert.deepEqual(getLeftovers(entries, "2026-11-09").map(({ entryId, day, daysRemaining }) => ({
+    entryId, day, daysRemaining,
+  })), [
+    { entryId: "ten-days", day: 10, daysRemaining: 0 },
+    { entryId: "five-days", day: 5, daysRemaining: 0 },
+  ]);
+  assert.deepEqual(getLeftovers(entries, "2026-11-10").map(({ entryId }) => entryId), ["five-days"]);
+});
+
+test("previously hidden expired meals remain hidden after extending retention", () => {
+  assert.deepEqual(getLeftovers([
+    { ...entry("hidden", "2026-11-04"), leftoversDismissed: true },
+    { ...entry("hidden-too", "2026-10-30"), leftoversDismissed: true },
+  ], "2026-11-09"), []);
 });
 
 test("either horizontal direction can dismiss, but short drags and vertical scrolling cannot", () => {
@@ -130,6 +167,23 @@ test("the planned date replaces the visible day counter below each freshness bar
   assert.doesNotMatch(html, /Planned/);
   assert.doesNotMatch(html, />Day 2 of 4</);
   assert.match(html, /aria-valuetext="Day 2 of 4; 3 days left"/);
+});
+
+test("days five through ten replace the freshness bar with an accessible vomiting emoji", () => {
+  const html = renderLeftovers(["2026-11-04", "2026-10-30"]);
+  assert.equal((html.match(/role="img" aria-label="Roast vegetables: expired leftovers"/g) ?? []).length, 2);
+  assert.equal((html.match(/\u{1F92E}/gu) ?? []).length, 2);
+  assert.equal((html.match(/>Expired<\/span>/g) ?? []).length, 2);
+  assert.equal((html.match(/Mark Roast vegetables leftovers as eaten/g) ?? []).length, 2);
+  assert.match(html, /dateTime="2026-11-04"/);
+  assert.match(html, /dateTime="2026-10-30"/);
+  assert.doesNotMatch(html, /role="progressbar"|days left|Last day|width:-|undefined/);
+});
+
+test("fresh and expired leftovers retain their separate indicators in the same list", () => {
+  const html = renderLeftovers(["2026-11-08", "2026-11-04"]);
+  assert.equal((html.match(/role="progressbar"/g) ?? []).length, 1);
+  assert.equal((html.match(/\u{1F92E}/gu) ?? []).length, 1);
 });
 
 test("an empty leftovers section remains visible with guidance", () => {

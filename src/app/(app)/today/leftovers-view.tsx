@@ -63,7 +63,7 @@ export function LeftoversView({
         </ul>
       ) : (
         <p className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-          No leftovers to keep track of. Past recipes appear here for four days.
+          No leftovers to keep track of. Past recipes stay here until cleared or more than ten days old.
         </p>
       )}
     </section>
@@ -106,7 +106,8 @@ function LeftoverRow({
     });
   }
 
-  const remainingLabel = leftover.daysRemaining === 1 ? "Last day" : `${leftover.daysRemaining} days left`;
+  const expired = leftover.daysRemaining === 0;
+  const remainingLabel = expired ? "Expired" : leftover.daysRemaining === 1 ? "Last day" : `${leftover.daysRemaining} days left`;
 
   return (
     <li className="overflow-hidden rounded-2xl bg-emerald-100 dark:bg-emerald-950">
@@ -194,23 +195,29 @@ function LeftoverRow({
             {pending ? "Clearing..." : "Eaten"}
           </button>
         </div>
-        <div
-          role="progressbar"
-          aria-label={`${leftover.name}: ${remainingLabel}`}
-          aria-valuemin={0}
-          aria-valuemax={LEFTOVER_DAYS}
-          aria-valuenow={leftover.daysRemaining}
-          aria-valuetext={`Day ${leftover.day} of ${LEFTOVER_DAYS}; ${remainingLabel.toLowerCase()}`}
-          className="relative h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
-        >
+        {expired ? (
+          <span role="img" aria-label={`${leftover.name}: expired leftovers`} className="text-2xl leading-none">
+            {"\u{1F92E}"}
+          </span>
+        ) : (
           <div
-            className={cn("h-full rounded-full", freshnessColors[leftover.day - 1])}
-            style={{ width: `${leftover.daysRemaining / LEFTOVER_DAYS * 100}%` }}
-          />
-          <div className="absolute inset-0 grid grid-cols-4" aria-hidden>
-            {[1, 2, 3].map((day) => <span key={day} className="border-r-2 border-white/70 dark:border-slate-900/70" />)}
+            role="progressbar"
+            aria-label={`${leftover.name}: ${remainingLabel}`}
+            aria-valuemin={0}
+            aria-valuemax={LEFTOVER_DAYS}
+            aria-valuenow={leftover.daysRemaining}
+            aria-valuetext={`Day ${leftover.day} of ${LEFTOVER_DAYS}; ${remainingLabel.toLowerCase()}`}
+            className="relative h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+          >
+            <div
+              className={cn("h-full rounded-full", freshnessColors[leftover.day - 1])}
+              style={{ width: `${leftover.daysRemaining / LEFTOVER_DAYS * 100}%` }}
+            />
+            <div className="absolute inset-0 grid grid-cols-4" aria-hidden>
+              {[1, 2, 3].map((day) => <span key={day} className="border-r-2 border-white/70 dark:border-slate-900/70" />)}
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
           <span>
             <time dateTime={leftover.plannedDate}>{fromISODate(leftover.plannedDate).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</time>
