@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Refrigerator, UtensilsCrossed } from "lucide-react";
-import { cn, fromISODate } from "@/lib/utils";
-import { isLeftoverSwipe, LEFTOVER_DAYS, type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
+import { Check, Plus, Refrigerator, UtensilsCrossed } from "lucide-react";
+import { addDays, cn, fromISODate, toISODate } from "@/lib/utils";
+import { isLeftoverSwipe, LEFTOVER_DAYS, LEFTOVER_RETENTION_DAYS, type AddLeftoversAction, type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
 
 const freshnessColors = [
   "bg-emerald-500",
@@ -16,17 +16,22 @@ const freshnessColors = [
 
 export function LeftoversView({
   leftovers,
+  addAction,
+  todayIso,
   dismissAction,
   refreshAt,
 }: {
   leftovers: Leftover[];
+  addAction: AddLeftoversAction;
+  todayIso: string;
   dismissAction: DismissLeftoversAction;
   refreshAt: number;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [adding, setAdding] = useState(false);
   const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
-  const visible = leftovers.filter((leftover) => !dismissed.has(leftover.entryId));
+  const visible = leftovers.filter((leftover) => !dismissed.has(`${leftover.source}:${leftover.entryId}`));
 
   useEffect(() => {
     const refresh = () => {
@@ -45,17 +50,40 @@ export function LeftoversView({
       <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
         <Refrigerator className="size-6" aria-hidden />
         <h2 id="leftovers-heading" className="text-2xl font-extrabold tracking-tight">Leftovers</h2>
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          disabled={adding}
+          aria-expanded={adding}
+          aria-controls="add-leftovers-form"
+          className="ml-auto flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-semibold hover:bg-emerald-50 focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-50 dark:hover:bg-emerald-950"
+        >
+          <Plus className="size-4" aria-hidden />
+          Add leftovers
+        </button>
       </div>
       <p role="status" className="sr-only">{message}</p>
+      {adding && (
+        <AddLeftoversForm
+          todayIso={todayIso}
+          addAction={addAction}
+          onCancel={() => setAdding(false)}
+          onAdded={(name) => {
+            setAdding(false);
+            setMessage(`${name} added to leftovers.`);
+            router.refresh();
+          }}
+        />
+      )}
       {visible.length ? (
         <ul className="space-y-3">
           {visible.map((leftover) => (
             <LeftoverRow
-              key={leftover.entryId}
+              key={`${leftover.source}:${leftover.entryId}`}
               leftover={leftover}
               dismissAction={dismissAction}
               onDismissed={() => {
-                setDismissed((previous) => new Set(previous).add(leftover.entryId));
+                setDismissed((previous) => new Set(previous).add(`${leftover.source}:${leftover.entryId}`));
                 setMessage(`${leftover.name} leftovers cleared.`);
               }}
             />
@@ -67,6 +95,85 @@ export function LeftoversView({
         </p>
       )}
     </section>
+  );
+}
+
+export function AddLeftoversForm({
+  todayIso,
+  addAction,
+  onCancel,
+  onAdded,
+}: {
+  todayIso: string;
+  addAction: AddLeftoversAction;
+  onCancel: () => void;
+  onAdded: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [cookedDate, setCookedDate] = useState(todayIso);
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+  const saving = useRef(false);
+  const inputClass = "mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 focus-visible:outline-2 focus-visible:outline-emerald-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+
+  return (
+    <form
+      id="add-leftovers-form"
+      className="space-y-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (saving.current) return;
+        saving.current = true;
+        setError("");
+        startTransition(async () => {
+          try {
+            const result = await addAction({ name, cookedDate });
+            if ("error" in result) setError(result.error);
+            else onAdded(name.trim());
+          } catch (error) {
+            console.error("Failed to add leftovers", error);
+            setError("Could not add these leftovers. Check your connection and try again.");
+          } finally {
+            saving.current = false;
+          }
+        });
+      }}
+    >
+      <p className="text-sm text-slate-500 dark:text-slate-400">Keep track of something you cooked without adding it to your meal plan.</p>
+      <label className="block text-sm font-medium">
+        What did you cook?
+        <input
+          autoFocus
+          name="name"
+          required
+          maxLength={200}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          disabled={pending}
+          placeholder="e.g. Vegetable soup"
+          className={inputClass}
+        />
+      </label>
+      <label className="block text-sm font-medium">
+        Cooked date
+        <input
+          type="date"
+          name="cookedDate"
+          required
+          min={toISODate(addDays(fromISODate(todayIso), -LEFTOVER_RETENTION_DAYS))}
+          max={todayIso}
+          value={cookedDate}
+          onChange={(event) => setCookedDate(event.target.value)}
+          disabled={pending}
+          className={inputClass}
+        />
+      </label>
+      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      <div className="flex justify-end gap-2">
+        <button type="button" disabled={pending} onClick={onCancel} className="min-h-11 rounded-xl px-4 text-sm font-medium hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800">Cancel</button>
+        <button type="submit" disabled={pending} className="min-h-11 rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">{pending ? "Adding..." : "Save leftovers"}</button>
+      </div>
+    </form>
   );
 }
 
@@ -92,7 +199,7 @@ function LeftoverRow({
     setError("");
     startTransition(async () => {
       try {
-        const result = await dismissAction({ entryId: leftover.entryId });
+        const result = await dismissAction({ entryId: leftover.entryId, source: leftover.source });
         if ("error" in result) setError(result.error);
         else {
           onDismissed();
@@ -181,7 +288,9 @@ function LeftoverRow({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="break-words font-bold text-emerald-800 dark:text-emerald-300">
-              <Link href={`/dishes/${leftover.dishId}`} className="hover:underline">{leftover.name}</Link>
+              {leftover.dishId
+                ? <Link href={`/dishes/${leftover.dishId}`} className="hover:underline">{leftover.name}</Link>
+                : leftover.name}
             </h3>
           </div>
           <button
@@ -206,11 +315,11 @@ function LeftoverRow({
             aria-valuemin={0}
             aria-valuemax={LEFTOVER_DAYS}
             aria-valuenow={leftover.daysRemaining}
-            aria-valuetext={`Day ${leftover.day} of ${LEFTOVER_DAYS}; ${remainingLabel.toLowerCase()}`}
+            aria-valuetext={leftover.day === 0 ? `Cooked today; ${remainingLabel.toLowerCase()}` : `Day ${leftover.day} of ${LEFTOVER_DAYS}; ${remainingLabel.toLowerCase()}`}
             className="relative h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
           >
             <div
-              className={cn("h-full rounded-full", freshnessColors[leftover.day - 1])}
+              className={cn("h-full rounded-full", freshnessColors[Math.max(0, leftover.day - 1)])}
               style={{ width: `${leftover.daysRemaining / LEFTOVER_DAYS * 100}%` }}
             />
             <div className="absolute inset-0 grid grid-cols-4" aria-hidden>

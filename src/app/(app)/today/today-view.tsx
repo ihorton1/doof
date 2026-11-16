@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { createRecipeClicks } from "@/lib/recipe-clicks";
 import { type AddDishTagAction } from "@/lib/dish-tags";
 import { QuickTagPicker } from "../plan/quick-tag-picker";
-import { type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
+import { type AddLeftoversAction, type DismissLeftoversAction, type Leftover } from "@/lib/leftovers";
 import { LeftoversView } from "./leftovers-view";
 import { DishRatingControl } from "@/components/dish-rating-control";
 import { DishRatingBadge } from "@/components/dish-rating-badge";
@@ -48,6 +48,8 @@ export function TodayView({
   setRatingAction,
   tagSuggestions,
   leftovers,
+  addLeftoversAction,
+  leftoversTodayIso,
   dismissLeftoversAction,
   leftoversRefreshAt,
 }: {
@@ -59,6 +61,8 @@ export function TodayView({
   setRatingAction: SetDishRatingAction;
   tagSuggestions: string[];
   leftovers: Leftover[];
+  addLeftoversAction: AddLeftoversAction;
+  leftoversTodayIso: string;
   dismissLeftoversAction: DismissLeftoversAction;
   leftoversRefreshAt: number;
 }) {
@@ -131,6 +135,8 @@ export function TodayView({
       />
       <LeftoversView
         leftovers={leftovers}
+        addAction={addLeftoversAction}
+        todayIso={leftoversTodayIso}
         dismissAction={dismissLeftoversAction}
         refreshAt={leftoversRefreshAt}
       />

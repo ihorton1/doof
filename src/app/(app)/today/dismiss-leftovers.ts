@@ -5,10 +5,13 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { isValidSessionCookie, SESSION_COOKIE_NAME } from "@/lib/auth";
-import { getLeftoverWindow, type DismissLeftoversAction } from "@/lib/leftovers";
+import { getLeftoverWindow, getManualLeftoverWindow, type DismissLeftoversAction } from "@/lib/leftovers";
 import { toISODate } from "@/lib/utils";
 
-const dismissSchema = z.object({ entryId: z.string().trim().min(1).max(200) });
+const dismissSchema = z.object({
+  entryId: z.string().trim().min(1).max(200),
+  source: z.enum(["plan", "manual"]).default("plan"),
+});
 
 export const dismissLeftovers: DismissLeftoversAction = async (input) => {
   const cookie = (await cookies()).get(SESSION_COOKIE_NAME)?.value;
@@ -18,10 +21,19 @@ export const dismissLeftovers: DismissLeftoversAction = async (input) => {
   if (!parsed.success) return { error: "Choose a meal to clear its leftovers." };
 
   try {
-    const result = await prisma.mealPlanEntry.updateMany({
+    const todayIso = toISODate(new Date());
+    const result = parsed.data.source === "manual"
+      ? await prisma.manualLeftover.updateMany({
+        where: {
+          id: parsed.data.entryId,
+          cookedDate: getManualLeftoverWindow(todayIso),
+        },
+        data: { dismissed: true },
+      })
+      : await prisma.mealPlanEntry.updateMany({
       where: {
         id: parsed.data.entryId,
-        date: getLeftoverWindow(toISODate(new Date())),
+        date: getLeftoverWindow(todayIso),
         mealSlot: "dinner",
         dishId: { not: null },
         status: { not: "skipped" },

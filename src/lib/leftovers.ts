@@ -5,7 +5,8 @@ export const LEFTOVER_RETENTION_DAYS = 10;
 
 export type Leftover = {
   entryId: string;
-  dishId: string;
+  source: "plan" | "manual";
+  dishId: string | null;
   name: string;
   dishImageUrl: string | null;
   plannedDate: string;
@@ -13,7 +14,11 @@ export type Leftover = {
   daysRemaining: number;
 };
 
-export type DismissLeftoversAction = (input: { entryId: string }) => Promise<
+export type AddLeftoversAction = (input: { name: string; cookedDate: string }) => Promise<
+  { status: "added" } | { error: string }
+>;
+
+export type DismissLeftoversAction = (input: { entryId: string; source?: Leftover["source"] }) => Promise<
   { status: "dismissed" } | { error: string }
 >;
 
@@ -27,22 +32,38 @@ type LeftoverEntry = {
   dish: { id: string; name: string } | null;
 };
 
+type ManualLeftoverEntry = {
+  id: string;
+  name: string;
+  cookedDate: Date;
+  dismissed: boolean;
+};
+
 export function getLeftoverWindow(todayIso: string) {
   const today = fromISODate(todayIso);
   return { gte: addDays(today, -LEFTOVER_RETENTION_DAYS), lt: today };
 }
 
-export function getLeftovers(entries: LeftoverEntry[], todayIso: string): Leftover[] {
-  const dates = Array.from({ length: LEFTOVER_RETENTION_DAYS }, (_, index) =>
-    toISODate(addDays(fromISODate(todayIso), -(index + 1))),
+export function getManualLeftoverWindow(todayIso: string) {
+  return { ...getLeftoverWindow(todayIso), lt: addDays(fromISODate(todayIso), 1) };
+}
+
+export function getLeftovers(
+  entries: LeftoverEntry[],
+  todayIso: string,
+  manualEntries: ManualLeftoverEntry[] = [],
+): Leftover[] {
+  const dates = Array.from({ length: LEFTOVER_RETENTION_DAYS + 1 }, (_, index) =>
+    toISODate(addDays(fromISODate(todayIso), -index)),
   );
-  return entries.flatMap((entry) => {
+  const planned = entries.flatMap((entry): Leftover[] => {
     const plannedDate = toISODate(entry.date);
-    const day = dates.indexOf(plannedDate) + 1;
-    if (!day || !entry.dish || entry.mealSlot !== "dinner" ||
+    const day = dates.indexOf(plannedDate);
+    if (day <= 0 || !entry.dish || entry.mealSlot !== "dinner" ||
       entry.status === "skipped" || entry.leftoversDismissed) return [];
     return [{
       entryId: entry.id,
+      source: "plan",
       dishId: entry.dish.id,
       name: entry.dish.name,
       dishImageUrl: entry.dishImageUrl,
@@ -50,7 +71,25 @@ export function getLeftovers(entries: LeftoverEntry[], todayIso: string): Leftov
       day,
       daysRemaining: Math.max(0, LEFTOVER_DAYS - day + 1),
     }];
-  }).sort((a, b) => b.day - a.day || a.entryId.localeCompare(b.entryId));
+  });
+  const manual = manualEntries.flatMap((entry): Leftover[] => {
+    const plannedDate = toISODate(entry.cookedDate);
+    const day = dates.indexOf(plannedDate);
+    if (day < 0 || entry.dismissed) return [];
+    return [{
+      entryId: entry.id,
+      source: "manual",
+      dishId: null,
+      name: entry.name,
+      dishImageUrl: null,
+      plannedDate,
+      day,
+      daysRemaining: Math.max(0, Math.min(LEFTOVER_DAYS, LEFTOVER_DAYS - day + 1)),
+    }];
+  });
+  return [...planned, ...manual].sort((a, b) =>
+    b.day - a.day || a.entryId.localeCompare(b.entryId) || a.source.localeCompare(b.source),
+  );
 }
 
 export function isLeftoverSwipe(deltaX: number, deltaY: number): boolean {

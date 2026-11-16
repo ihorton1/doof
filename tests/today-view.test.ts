@@ -23,6 +23,8 @@ function renderToday(entries: Entry[]) {
     setRatingAction: async ({ rating }) => ({ rating }),
     tagSuggestions: ["fast", "vegetarian", "lyse friendly"],
     leftovers: [],
+    addLeftoversAction: async () => ({ status: "added" } as const),
+    leftoversTodayIso: "2026-10-30",
     dismissLeftoversAction: async () => ({ status: "dismissed" } as const),
     leftoversRefreshAt: new Date("2026-10-31").getTime(),
   });

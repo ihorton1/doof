@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { getLeftovers, getLeftoverWindow, isLeftoverSwipe } from "../src/lib/leftovers";
 import { fromISODate, toISODate } from "../src/lib/utils";
-import { LeftoversView } from "../src/app/(app)/today/leftovers-view";
+import { AddLeftoversForm, LeftoversView } from "../src/app/(app)/today/leftovers-view";
 
 function entry(id: string, date: string) {
   return {
@@ -139,6 +139,8 @@ function renderLeftovers(dates: string[], dishImageUrl: string | null = null) {
       ...entry(`entry-${index}`, date), dishImageUrl,
     })), "2026-11-09"),
     dismissAction: async () => ({ status: "dismissed" } as const),
+    addAction: async () => ({ status: "added" } as const),
+    todayIso: "2026-11-09",
     refreshAt: fromISODate("2026-11-10").getTime(),
   })));
 }
@@ -209,4 +211,77 @@ test("recipes without photos retain the same thumbnail space with a utensil plac
   assert.match(html, /row-span-3 flex size-14/);
   assert.match(html, /lucide-utensils-crossed/);
   assert.doesNotMatch(html, /<img/);
+});
+
+test("manual leftovers include today, merge oldest first and exclude dismissed or out-of-window entries", () => {
+  const manual = (id: string, date: string) => ({
+    id, name: "Soup", cookedDate: fromISODate(date), dismissed: false,
+  });
+  const leftovers = getLeftovers([entry("plan", "2026-11-08")], "2026-11-09", [
+    manual("today", "2026-11-09"),
+    manual("oldest", "2026-10-30"),
+    manual("too-old", "2026-10-29"),
+    manual("future", "2026-11-10"),
+    manual("last-day", "2026-11-05"),
+    { ...manual("dismissed", "2026-11-08"), dismissed: true },
+  ]);
+  assert.deepEqual(leftovers.map(({ entryId, source, day, daysRemaining }) => ({
+    entryId, source, day, daysRemaining,
+  })), [
+    { entryId: "oldest", source: "manual", day: 10, daysRemaining: 0 },
+    { entryId: "last-day", source: "manual", day: 4, daysRemaining: 1 },
+    { entryId: "plan", source: "plan", day: 1, daysRemaining: 4 },
+    { entryId: "today", source: "manual", day: 0, daysRemaining: 4 },
+  ]);
+  assert.equal(leftovers.at(-1)?.dishId, null);
+  assert.equal(leftovers.at(-1)?.dishImageUrl, null);
+  assert.equal(getLeftovers([], "2026-11-10", [manual("oldest", "2026-10-30")]).length, 0);
+});
+
+test("manual cooked dates advance by calendar day across year and daylight saving boundaries", () => {
+  for (const [cooked, tomorrow] of [
+    ["2026-12-31", "2027-01-01"],
+    ["2026-03-29", "2026-03-30"],
+    ["2026-11-01", "2026-11-02"],
+  ]) {
+    const manual = [{ id: "manual", name: "Soup", cookedDate: fromISODate(cooked), dismissed: false }];
+    assert.equal(getLeftovers([], cooked, manual)[0].day, 0);
+    assert.equal(getLeftovers([], tomorrow, manual)[0].day, 1);
+  }
+});
+
+test("manual leftovers show a name without a broken recipe link and a green bar for today", () => {
+  const html = renderToStaticMarkup(createElement(AppRouterContext.Provider, {
+    value: { back() {}, forward() {}, refresh() {}, push() {}, replace() {}, prefetch() {} },
+  }, createElement(LeftoversView, {
+    leftovers: getLeftovers([], "2026-11-09", [{
+      id: "manual", name: "Homemade soup", cookedDate: fromISODate("2026-11-09"), dismissed: false,
+    }]),
+    dismissAction: async () => ({ status: "dismissed" } as const),
+    addAction: async () => ({ status: "added" } as const),
+    todayIso: "2026-11-09",
+    refreshAt: fromISODate("2026-11-10").getTime(),
+  })));
+  assert.match(html, />Homemade soup<\/h3>/);
+  assert.match(html, /Cooked today; 4 days left/);
+  assert.match(html, /bg-emerald-500[^"]*" style="width:100%"/);
+  assert.match(html, /Mark Homemade soup leftovers as eaten/);
+  assert.doesNotMatch(html, /href=|undefined|\/dishes\/null/);
+});
+
+test("the add control is available even on an empty list and the form defaults to the real today", () => {
+  assert.match(renderLeftovers([]), /aria-expanded="false" aria-controls="add-leftovers-form"/);
+  assert.match(renderLeftovers([]), /Add leftovers/);
+  const html = renderToStaticMarkup(createElement(AddLeftoversForm, {
+    todayIso: "2026-11-09",
+    addAction: async () => ({ status: "added" } as const),
+    onCancel() {},
+    onAdded() {},
+  }));
+  assert.match(html, /What did you cook\?/);
+  assert.match(html, /<input[^>]*required="" maxLength="200"[^>]*name="name"/);
+  assert.match(html, /type="date" required="" min="2026-10-30" max="2026-11-09"[^>]*name="cookedDate"/);
+  assert.match(html, /value="2026-11-09"/);
+  assert.match(html, /Save leftovers/);
+  assert.match(html, /Cancel/);
 });

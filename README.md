@@ -34,6 +34,11 @@ be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
 400 ms pause to distinguish triple taps; swiping cancels pending taps.
 
 Scroll past the last recipe card to reach **Leftovers** below Today's recipes.
+Use **Add leftovers** to enter a name and cooked date for something outside your
+meal plan; no saved recipe is required. The date defaults to today and can be
+backdated up to ten days. These entries appear immediately, persist across devices,
+and do not change the meal plan, shopping list or recipe cooking counts. Today's
+entries show a full green bar, then follow the same timing as automatic leftovers.
 Saved recipes planned for
 the previous ten calendar days appear automatically (except skipped meals),
 with the oldest first. Yesterday is day 1 (green, four days left), followed by
@@ -44,13 +49,14 @@ expired under the old four-day window stay hidden when this change is applied.
 This always
 uses the real current date, even while browsing another day, and refreshes at
 midnight. Separate occurrences of the same recipe are tracked independently.
-Each bar shows its planned date underneath, alongside the remaining time.
+Each bar shows its planned date (or cooked date for manually added leftovers)
+underneath, alongside the remaining time.
 Leftovers include a small saved-recipe thumbnail, or a utensil placeholder when
 the recipe has no photo.
 Swipe a leftover left or right, or use its **Eaten** button, to dismiss it
 persistently across devices. This does not delete the recipe or change the meal
 plan; failures keep the row visible with a retryable error. Dates are a reminder
-based on the plan, not confirmation of cooking or a food-safety guarantee.
+based on the planned or entered cooked date, not a food-safety guarantee.
 
 On a dish's detail page, double-tap its title or photo to open the same 30-day
 planning picker as Plan, or triple-tap to add a persistent tag with autocomplete.

@@ -85,6 +85,16 @@ model MealPlanEntry {
   @@index([date])
 }
 
+model ManualLeftover {
+  id         String   @id @default(cuid())
+  name       String
+  cookedDate DateTime
+  dismissed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([cookedDate])
+}
+
 model ProduceBox {
   id            String           @id @default(cuid())
   scope         String?          @unique

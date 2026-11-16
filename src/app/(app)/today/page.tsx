@@ -4,8 +4,9 @@ import { addDays, toISODate, fromISODate } from "@/lib/utils";
 import { TodayView } from "./today-view";
 import { getTagSuggestions } from "@/lib/tag-suggestions";
 import { addDishTag } from "../plan/add-dish-tag";
-import { getLeftovers, getLeftoverWindow } from "@/lib/leftovers";
+import { getLeftovers, getLeftoverWindow, getManualLeftoverWindow } from "@/lib/leftovers";
 import { dismissLeftovers } from "./dismiss-leftovers";
+import { addLeftovers } from "./add-leftovers";
 import { setDishRating } from "../dishes/set-dish-rating";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function TodayPage({
   const rangeStart = addDays(focus, -half);
   const rangeEnd = addDays(focus, half + 1);
 
-  const [entries, dishIdsWithImages, tagSuggestions, leftoverEntries] = await Promise.all([
+  const [entries, dishIdsWithImages, tagSuggestions, leftoverEntries, manualLeftovers] = await Promise.all([
     prisma.mealPlanEntry.findMany({
       where: {
         mealSlot: "dinner",
@@ -66,6 +67,10 @@ export default async function TodayPage({
         leftoversDismissed: true,
         dish: { select: { id: true, name: true, updatedAt: true } },
       },
+    }),
+    prisma.manualLeftover.findMany({
+      where: { cookedDate: getManualLeftoverWindow(realTodayIso), dismissed: false },
+      select: { id: true, name: true, cookedDate: true, dismissed: true },
     }),
   ]);
 
@@ -116,7 +121,9 @@ export default async function TodayPage({
         dishImageUrl: entry.dish && dishIdsWithImages.has(entry.dish.id)
           ? dishImagePath(entry.dish.id, entry.dish.updatedAt)
           : null,
-      })), realTodayIso)}
+      })), realTodayIso, manualLeftovers)}
+      addLeftoversAction={addLeftovers}
+      leftoversTodayIso={realTodayIso}
       dismissLeftoversAction={dismissLeftovers}
       leftoversRefreshAt={addDays(realToday, 1).getTime()}
     />
