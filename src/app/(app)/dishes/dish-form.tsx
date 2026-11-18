@@ -13,6 +13,7 @@ type Ingredient = {
   name: string;
   quantity: string;
   unit: string;
+  notes: string;
 };
 
 type Initial = {
@@ -22,7 +23,7 @@ type Initial = {
   servings?: number | null;
   sourceUrl?: string | null;
   imageUrl?: string | null;
-  ingredients?: { name: string; quantity: string | null; unit: string | null }[];
+  ingredients?: { name: string; quantity: string | null; unit: string | null; notes?: string | null }[];
   tags?: string[];
   rating?: DishRating | null;
 };
@@ -49,12 +50,13 @@ export function DishForm({
           name: i.name,
           quantity: i.quantity ?? "",
           unit: i.unit ?? "",
+          notes: i.notes ?? "",
         }))
-      : [{ name: "", quantity: "", unit: "" }],
+      : [{ name: "", quantity: "", unit: "", notes: "" }],
   );
 
   function addRow() {
-    setIngredients((rows) => [...rows, { name: "", quantity: "", unit: "" }]);
+    setIngredients((rows) => [...rows, { name: "", quantity: "", unit: "", notes: "" }]);
   }
   function previewUrl(value: string) {
     const url = value.trim();
@@ -90,7 +92,7 @@ export function DishForm({
         currentImageUrl={imageUrl}
         onUseImage={setImageUrl}
         onReplace={(rows, details) => {
-          setIngredients(rows.map(({ name, quantity, unit }) => ({ name, quantity, unit })));
+          setIngredients(rows.map(({ name, quantity, unit, notes }) => ({ name, quantity, unit, notes: notes ?? "" })));
           if (details) {
             setName(details.name);
             if (details.notes !== undefined) setNotes(details.notes);
@@ -180,13 +182,13 @@ export function DishForm({
         <label className="text-sm font-medium block mb-2">Ingredients</label>
         <div className="space-y-2">
           {ingredients.map((ing, idx) => (
-            <div key={idx} className="flex gap-2">
+            <div key={idx} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_2.5rem] gap-2 sm:grid-cols-[5rem_5rem_minmax(0,1fr)_minmax(0,1fr)_3rem]">
               <input
                 name="ingredient_quantity"
                 value={ing.quantity}
                 onChange={(e) => updateRow(idx, "quantity", e.target.value)}
                 placeholder="Qty"
-                className={`${inputCls} !w-20 flex-shrink-0`}
+                className={`${inputCls} min-w-0 col-start-1 row-start-1`}
               />
               <input
                 name="ingredient_unit"
@@ -195,7 +197,7 @@ export function DishForm({
                 placeholder="Unit"
                 list={ing.unit ? "unit-suggestions" : undefined}
                 autoComplete="off"
-                className={`${inputCls} !w-20 flex-shrink-0`}
+                className={`${inputCls} min-w-0 col-start-2 row-start-1`}
               />
               <input
                 name="ingredient_name"
@@ -204,12 +206,22 @@ export function DishForm({
                 placeholder="Ingredient"
                 list={ing.name ? "ingredient-name-suggestions" : undefined}
                 autoComplete="off"
-                className={`${inputCls} flex-1 min-w-0`}
+                className={`${inputCls} min-w-0 col-start-1 row-start-2 sm:col-start-3 sm:row-start-1`}
+              />
+              <input
+                name="ingredient_notes"
+                value={ing.notes}
+                onChange={(e) => updateRow(idx, "notes", e.target.value)}
+                maxLength={200}
+                placeholder="Note (optional)"
+                aria-label={`Notes for ingredient ${idx + 1}`}
+                aria-describedby="ingredient-notes-help"
+                className={`${inputCls} min-w-0 col-start-2 row-start-2 sm:col-start-4 sm:row-start-1`}
               />
               <button
                 type="button"
                 onClick={() => removeRow(idx)}
-                className="h-12 w-12 flex items-center justify-center text-slate-400 hover:text-rose-600"
+                className="h-12 w-full col-start-3 row-start-2 sm:col-start-5 sm:row-start-1 flex items-center justify-center text-slate-400 hover:text-rose-600"
                 aria-label="Remove ingredient"
               >
                 <Trash2 className="size-4" />
@@ -224,18 +236,28 @@ export function DishForm({
         >
           <Plus className="size-4" /> Add ingredient
         </button>
+        <p id="ingredient-notes-help" className="mt-2 text-xs text-slate-500">
+          Ingredient notes (e.g. finely chopped, room temperature) appear on the dish, not on your shopping list.
+        </p>
       </div>
 
-      <Field label="Notes">
-        <textarea
-          name="notes"
-          rows={6}
-          maxLength={20000}
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          className={`${inputCls} font-mono text-sm`}
-        />
-      </Field>
+      <div className="space-y-2">
+        <Field label="Notes">
+          <textarea
+            name="notes"
+            rows={6}
+            maxLength={20000}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            aria-describedby="dish-notes-help"
+            placeholder="e.g. Make the sauce a day ahead. Use a potato ricer for a smoother texture."
+            className={`${inputCls} !h-auto min-h-40 resize-y py-3 text-sm`}
+          />
+        </Field>
+        <p id="dish-notes-help" className="text-xs text-slate-500">
+          Cooking tips, substitutions, equipment, or reminders. Saved with the dish, never added to your shopping list.
+        </p>
+      </div>
 
       <div className="sticky bottom-[var(--bottom-nav-height,0px)] z-20 flex gap-3 bg-slate-50/95 py-3 backdrop-blur dark:bg-slate-950/95">
         <SaveButton />

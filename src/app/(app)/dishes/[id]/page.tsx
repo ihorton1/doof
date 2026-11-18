@@ -80,7 +80,10 @@ export default async function DishDetailPage({
                 <span className="text-slate-500 w-24 flex-shrink-0 break-words">
                   {[ing.quantity, ing.unit].filter(Boolean).join(" ")}
                 </span>
-                <span className="min-w-0 break-words">{ing.name}</span>
+                <span className="min-w-0 flex-1 break-words">{ing.name}</span>
+                {ing.notes && (
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-slate-500">{ing.notes}</span>
+                )}
               </li>
             ))}
           </ul>

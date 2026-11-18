@@ -15,6 +15,18 @@ test("repeated planned dishes sum quantities without duplicate ingredient rows",
   }]);
 });
 
+test("dish notes never become shopping-list items", () => {
+  const dishWithNotes = { ...dish, notes: "Use a potato ricer.\nMake the sauce a day ahead." };
+  assert.deepEqual(buildShoppingRows([dishWithNotes]), buildShoppingRows([dish]));
+  assert.deepEqual(buildShoppingRows([{ ...dishWithNotes, ingredients: [] }]), []);
+});
+
+test("ingredient notes do not change shopping names, quantities or grouping", () => {
+  const withNotes = { ...dish, ingredients: [{ ...ingredient, notes: "finely chopped" }] };
+  assert.deepEqual(buildShoppingRows([withNotes]), buildShoppingRows([dish]));
+  assert.deepEqual(buildShoppingRows([withNotes, dish]), buildShoppingRows([dish, dish]));
+});
+
 test("same ingredients in different dishes remain independently checkable", () => {
   const rows = buildShoppingRows([dish, { ...dish, id: "dish-b", name: "Soup" }]);
   assert.equal(rows.length, 2);

@@ -366,6 +366,17 @@ Single-password access, no user accounts.
 - `PlanTemplate` → `PlanTemplateEntry` + `PlanTemplateMiscItem` for reusable
   weekly plans.
 
+### Dish notes
+
+On **New dish** and **Edit dish**, the multiline **Notes** box below Ingredients
+holds cooking instructions, tips, substitutions, equipment and reminders.
+Notes are shown on the saved dish page and never added to the shopping list.
+Only ingredient rows contribute to shopping.
+Each ingredient also has an optional note to its right (up to 200 characters),
+for details such as "finely chopped" or "room temperature". These notes are
+shown beside the ingredient on the dish page, preserved when editing, and
+excluded from the shopping list.
+
 ### Importing ingredients from a recipe URL
 
 On either **New dish** or **Edit dish**, paste the recipe's **Source URL** to
@@ -383,6 +394,12 @@ spelling. Ambiguous package sizes and alternative measurements stay intact in th
 ingredient field for review; obvious section headings start omitted.
 Each original ingredient sentence remains available as selectable words.
 Select one or more words, then assign them to a field to correct the suggestion.
+The Quantity, Unit, Ingredient and Notes assignment buttons are equal-width and span
+the card, with large mobile tap targets. Tap a selected word again to deselect it.
+Each import row includes optional ingredient notes (up to 200 characters), which
+can be typed or assigned from selected words. Notes carry into the dish form,
+survive removing and undoing a row, and stay out of shopping. Assigning words
+copies them; edit the ingredient name separately to remove any preparation text.
 Attached measurements such as `200g` or `cup/57` are separately selectable,
 while fractions and hyphenated ingredient names remain intact. You can edit
 the fields directly. Sentences with a blank ingredient name are automatically
