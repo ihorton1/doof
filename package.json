@@ -2,13 +2,21 @@
   "name": "doof",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "next dev",
+    "dev:bolts": "npm run dev --workspace=@doof/bolts",
     "build": "next build",
+    "build:bolts": "npm run build --workspace=@doof/bolts",
+    "build:apps": "npm run build && npm run build:bolts",
     "start": "next start",
     "lint": "eslint",
     "test": "node tests/run.mjs",
-    "postinstall": "prisma generate"
+    "test:container": "docker build --target runtime-base -t doof-bolts:runtime-test . && node --import tsx --test tests/shared-container.integration.ts",
+    "test:bolts:db": "node --import tsx --test tests/bolts-db.integration.ts",
+    "postinstall": "prisma generate && npm run db:generate --workspace=@doof/bolts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

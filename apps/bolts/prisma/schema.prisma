@@ -1,0 +1,29 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+  runtime    = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("BOLTS_DATABASE_URL")
+}
+
+model Idea {
+  id        String      @id @default(cuid())
+  title     String      @db.VarChar(200)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  entries   IdeaEntry[]
+}
+
+model IdeaEntry {
+  id        String   @id @default(cuid())
+  ideaId    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId, createdAt])
+}

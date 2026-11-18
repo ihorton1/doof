@@ -1,4 +1,102 @@
-# doof
+# doof + bolts
+
+This repository is an npm-workspaces monorepo. **Doof** remains at the repository
+root to preserve its existing development commands and imports. **Bolts** is an
+independent Next.js app in `apps/bolts` for collecting ideas and gradually adding
+dated notes and discoveries. It has its own layout, styles, manifest, iPhone
+home-screen icon and engine-free Prisma client.
+
+The shared Docker image runs both Next.js servers behind Nginx in **one container
+and one replica**. Nginx routes `/bolts/` and its assets to Bolts; all other paths
+continue to Doof. Both apps share the replica's
+CPU/memory and deploy/restart together. They are not security-isolated workloads.
+Bolts has a dedicated password login at `/bolts/login/`, with its own signed,
+HTTP-only session cookie scoped to `/bolts`. Signing in or out of either app
+does not sign in or out of the other. The live password currently uses Doof's
+existing password secret; the session-signing secrets remain separate.
+The production database is `bolts`, accessed through its own `bolts_app` database role;
+development uses `bolts_dev`. Both use the existing PostgreSQL server, so no
+additional server, compute replica, domain or certificate is needed.
+Doof's database and schema are unchanged.
+
+## Trying Bolts locally
+
+```powershell
+npm install
+npm run db:migrate --workspace=@doof/bolts
+npm run dev:bolts           # http://localhost:3001/bolts/
+```
+
+Before migrating, create a gitignored `apps/bolts/.env` containing
+`BOLTS_DATABASE_URL`, pointing to the **bolts_dev** database (not Doof's database).
+Use the existing server's credentials with the database name changed to
+`bolts_dev`, and preserve its SSL connection options. `BOLTS_DATABASE_URL` is
+deliberately separate from Doof's `DATABASE_URL`; there is no fallback between
+them. The database is already provisioned for this development setup.
+For another environment, create an empty PostgreSQL database before migrating.
+Also set `BOLTS_APP_PASSWORD` and an independent `BOLTS_COOKIE_SECRET` of at
+least 16 characters. These are server-only variables; keep them out of source
+control. Production stores them as Azure Container App secret references.
+
+The home page (`/bolts/`) lists your ideas, most recently updated first. Each card
+previews the latest entry (up to three lines) and the date that entry was added,
+using the same UTC date format as the idea page. Ideas without entries show no
+preview or entry date. **New idea**
+opens a dedicated idea widget at `/bolts/ideas/new/`, where you enter a title.
+The editable heading starts with a grey **title...** placeholder.
+Nothing is saved until **Save idea** is used; **All ideas** returns to the feed
+without creating an idea. Saving opens `/bolts/ideas/<id>/`. Each idea page shows its title
+and entries in oldest-first order, with an **Add to this idea** form. Entries
+are dated automatically when saved (displayed as ISO calendar dates in UTC).
+Text and line breaks are preserved; entries are plain text, not HTML.
+HTTP/HTTPS addresses and `www.` links are clickable in entries and feed previews,
+opening in a new tab while leaving Bolts open. Feed cards still open the idea
+when clicked outside an external link. Surrounding punctuation is not linked.
+Adding an entry updates the idea's position on the home page.
+Titles are limited to 200 characters and entries to 20,000 characters.
+Empty states guide first use; no example data is inserted automatically.
+Save failures show an error and preserve your text for retrying.
+Editing, deletion and attachments are not implemented yet.
+
+In another terminal, run Doof as usual with `npm run dev` (port 3000 by default).
+If Doof is already running on another port, leave it running. The apps have
+separate development servers and can be worked on independently.
+Bolts explicitly uses Next.js' supported Webpack bundler for dev and build:
+with the current Next.js version, Turbopack picks up Doof's root-level proxy
+when building this nested app. Doof retains its existing Turbopack setup.
+
+To try the shared production-style routing with Docker Desktop running:
+Use unquoted `KEY=value` lines in files passed to Docker's `--env-file`.
+
+```powershell
+docker build -t doof-bolts .
+# Use a development DATABASE_URL: startup applies Doof's pending migrations.
+docker run --rm --name doof-bolts --env-file .env --env-file apps\bolts\.env -p 127.0.0.1:8080:3000 doof-bolts
+```
+
+- Doof: `http://localhost:8080`
+- Bolts: `http://localhost:8080/bolts/`
+
+Bolts' `/bolts` base path is fixed at build time. Next.js handles its internal
+navigation and assets beneath that prefix, and Nginx preserves it when proxying.
+Login requests have a small ingress rate limit in addition to the wrong-password
+delay. Unauthenticated page and mutation requests cannot access stored ideas.
+
+### iPhone home-screen installation
+
+Bolts supplies its own standalone manifest, app title and Apple touch icon.
+Open `https://doof-app.icydesert-05217ed8.uksouth.azurecontainerapps.io/bolts/`
+in Safari, sign in, and
+choose **Share > Add to Home Screen**. This creates a separate Bolts icon from
+Doof. A computer's `localhost` address is not reachable as that computer from
+the phone; local desktop preview does not validate installation on iOS.
+The manifest has its own ID, start URL and scope beneath `/bolts/`, and its
+Apple touch icon is independent of Doof's.
+Offline support is not included.
+
+---
+
+## Doof
 
 A personal meal-planning web app: manage a catalog of dishes (ingredients, tags,
 images), plan upcoming meals, generate a shopping list from them, and see a
@@ -389,10 +487,17 @@ npm run dev                 # http://localhost:3000
 | Command | Description |
 |---|---|
 | `npm run dev` | Start Next.js dev server (Turbopack). |
+| `npm run dev:bolts` | Start Bolts on port 3001. |
 | `npm run build` | Production build (`.next/standalone`). |
+| `npm run build:bolts` | Build Bolts' independent standalone bundle. |
+| `npm run build:apps` | Build both apps for the shared image. |
+| `npm run db:generate --workspace=@doof/bolts` | Generate Bolts' engine-free Prisma client. |
+| `npm run db:migrate --workspace=@doof/bolts` | Apply only Bolts' migrations using `BOLTS_DATABASE_URL`. |
 | `npm run start` | Run the production server (after `build`). |
 | `npm run lint` | ESLint. |
 | `npm test` | Recipe extraction, ingredient conversion and URL import tests. |
+| `npm run test:container` | Docker-based ingress, shutdown and failure tests using fixture servers; no database needed. |
+| `npm run test:bolts:db` | Test persistence against `bolts_dev`; creates and cleans up only its own test records. |
 
 ### Pointing local dev at the Azure database
 
@@ -418,7 +523,7 @@ All resources live in resource group **`doof-rg`** (UK South).
 |---|---|---|
 | `doof-app` | Container App | Pulls image from GHCR; public ingress on port 3000. |
 | `doof-env` | Container Apps Environment | Hosts `doof-app`. |
-| `doof-pg-4828` | Postgres Flexible Server | v16, Burstable B1ms, 32 GB. Public access enabled, gated by firewall rules. Contains the production `doof` database (and `doof_dev` for local dev). |
+| `doof-pg-4828` | Postgres Flexible Server | v16, Burstable B1ms, 32 GB. Public access enabled, gated by firewall rules. Contains production `doof` and `bolts`, plus development `doof_dev` and `bolts_dev` databases. |
 | `workspace-…` | Log Analytics Workspace | Container Apps logs. |
 
 ### Container App runtime configuration
@@ -428,7 +533,14 @@ All resources live in resource group **`doof-rg`** (UK South).
   - `DATABASE_URL` ← secret `database-url`
   - `APP_PASSWORD` ← secret `app-password`
   - `COOKIE_SECRET` ← secret `cookie-secret`
+  - `BOLTS_DATABASE_URL` ← secret `bolts-database-url`
+  - `BOLTS_APP_PASSWORD` ← secret `app-password`
+  - `BOLTS_COOKIE_SECRET` ← secret `bolts-cookie-secret`
 - `NODE_ENV=production`
+- `BOLTS_DATABASE_URL`: Bolts' own PostgreSQL connection string, required for its
+  pages. Configure as a separate secret before enabling Bolts in a deployed
+  environment; never point it at Doof's database or reuse `bolts_dev` for production.
+- Ingress target port remains **3000**; internal app ports are not exposed.
 
 ### Container image
 
@@ -436,27 +548,47 @@ Built from the multi-stage `Dockerfile`:
 
 1. **deps** – `npm ci` on `node:20-bookworm-slim`.
 2. **builder** – copies source, runs `prisma generate` (with a dummy
-   `DATABASE_URL` so codegen succeeds without a live DB) and `next build`
-   producing the standalone server bundle.
-3. **runner** – minimal `node:20-bookworm-slim` containing `.next/standalone`,
+   `DATABASE_URL` so codegen succeeds without a live DB) and `npm run build:apps`,
+   producing separate standalone server bundles.
+3. **runtime-base** – Node.js plus Nginx, Tini and configuration tools; can be
+   built independently for the container integration tests.
+4. **runner** – extends `runtime-base` with `.next/standalone`,
    `.next/static`, `public/`, the Prisma migrations, the generated Prisma
    client, and a self-contained `prisma` CLI installed at `/opt/prisma`.
+   Bolts' standalone bundle lives separately at `/opt/bolts`, alongside Nginx
+   for path routing and Tini for process reaping/signal forwarding.
 
 ### Container startup
 
-`entrypoint.sh` runs on every container start:
+`entrypoint.sh` runs under Tini on every container start:
 
 ```sh
 mkdir -p /data
 prisma migrate deploy     # apply any pending migrations
-exec node server.js       # start Next.js standalone server
+# Start Doof on loopback port 3002 and Bolts on loopback port 3001.
+# Start Nginx on public port 3000, routing /bolts/ to Bolts, others to Doof.
 ```
+
+The entrypoint validates Bolts' required configuration and Nginx before applying
+migrations. It also applies Bolts'
+separate migration history before starting either server; a failed migration
+or missing configuration prevents startup, rather than silently using Doof's
+database or starting an unprotected application.
+It supervises all three processes: if any exits, it logs the failure,
+stops the others and exits nonzero so Azure can restart the replica. Container
+shutdown signals stop all services. Doof's database URL, password and cookie
+secret are removed from Bolts' process environment, and Bolts' database/session credentials are
+removed from Doof's process environment.
 
 (`/data` is a holdover from the SQLite era and is harmless under Postgres.)
 
 ### CI/CD
 
 `.github/workflows/deploy.yml` runs on push to `main`:
+
+Manual runs build and publish without deploying by default, allowing a branch
+image to be validated first. Manual deployment requires the `deploy` input and
+the `main` branch so the existing Azure OIDC trust remains unchanged.
 
 1. Builds the Docker image with Buildx (gha cache).
 2. Pushes `latest` and `<commit-sha>` tags to GHCR

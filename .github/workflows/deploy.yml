@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the image after building (main branch only)
+        type: boolean
+        default: false
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
@@ -41,12 +46,13 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ steps.img.outputs.name }}:latest
             ${{ steps.img.outputs.name }}:${{ github.sha }}
+            ${{ github.ref == 'refs/heads/main' && format('{0}:latest', steps.img.outputs.name) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Azure login (OIDC)
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.deploy)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -54,6 +60,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Update Container App
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.deploy)
         run: |
           az containerapp update \
             --name ${{ env.CONTAINER_APP }} \

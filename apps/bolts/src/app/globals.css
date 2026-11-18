@@ -1,0 +1,220 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #242424;
+  background: #f5f5f3;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  padding: max(1.25rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1.25rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+}
+
+button, input, textarea { font: inherit; }
+a { color: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+:focus-visible {
+  outline: 3px solid #6d5bd0;
+  outline-offset: 4px;
+}
+
+.home-sheet, .detail-shell {
+  width: min(100%, 30rem);
+  margin: 0 auto;
+}
+
+.home-sheet {
+  min-height: calc(100svh - 2.5rem);
+  padding: 2rem 1.5rem;
+  border: 1.5px solid #41413f;
+  border-radius: 1.5rem;
+  background: #fff;
+}
+
+.home-header {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+
+.feed-actions { display: grid; justify-items: end; gap: 0.25rem; }
+.sign-out { min-height: 2.75rem; padding: 0.5rem; border: 0; background: transparent; color: #676761; font-size: 0.75rem; cursor: pointer; }
+.login-sheet { min-height: auto; margin-top: 15svh; }
+.login-intro { color: #73736d; font-size: 0.9375rem; line-height: 1.5; }
+
+.wordmark {
+  margin: 0 0 1.5rem;
+  color: #676761;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+.wordmark span { color: #6d5bd0; }
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -0.045em;
+  overflow-wrap: anywhere;
+}
+
+.idea-list, .entry-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.idea-list { display: grid; gap: 1.25rem; }
+
+.idea-card {
+  position: relative;
+  display: flex;
+  min-height: 6rem;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  border: 1.5px solid #565651;
+  border-radius: 1rem;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.idea-card:hover { background: #f9f8ff; border-color: #6d5bd0; }
+.idea-card-title { font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; text-decoration: none; }
+.idea-card-title::after { position: absolute; inset: 0; border-radius: 1rem; content: ""; }
+.entry-link { color: #6251c0; text-decoration: underline; text-underline-offset: 0.15em; overflow-wrap: anywhere; }
+.idea-card-preview .entry-link { position: relative; z-index: 1; }
+.idea-card-preview p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin: 0.25rem 0 0;
+  color: #565651;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.idea-card-meta { display: flex; justify-content: space-between; color: #777771; font-size: 0.75rem; }
+.card-arrow { color: #4a4a47; font-size: 1rem; }
+
+.button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 0.875rem;
+  border: 0;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.button-primary { background: #6d5bd0; color: #fff; }
+.button-primary:hover { background: #5c49be; }
+.button:disabled { opacity: 0.65; cursor: wait; }
+
+.idea-form { display: grid; gap: 0.75rem; }
+.idea-form label { font-size: 0.875rem; font-weight: 600; }
+.idea-form input, .idea-form textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.875rem;
+  border: 1px solid #d6d6d1;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #242424;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.idea-form textarea { resize: vertical; }
+.idea-form input::placeholder, .idea-form textarea::placeholder { color: #7b7b76; }
+.idea-form .idea-title-input {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+.idea-form .button { justify-self: end; }
+.form-error { margin: 0; color: #a32135; font-size: 0.875rem; line-height: 1.5; }
+.form-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.form-footer .button { flex-shrink: 0; }
+.save-status { margin: 0; color: #73736d; font-size: 0.75rem; line-height: 1.5; }
+
+.back-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64645f;
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+.back-link:hover { color: #5c49be; }
+.detail-shell > .back-link { margin: 0 0 0.75rem 0.5rem; }
+.detail-sheet {
+  min-height: calc(100svh - 6rem);
+  padding: 1.5rem;
+  border: 1px solid #f0f0ec;
+  border-radius: 1.75rem;
+  background: #fff;
+  box-shadow: 0 8px 26px #2626220a, 0 2px 6px #26262205;
+}
+.detail-header { margin-bottom: 1.75rem; }
+.detail-header .wordmark { margin-bottom: 1rem; }
+.detail-header h1 { font-size: 1.5rem; line-height: 1.3; letter-spacing: -0.03em; }
+.entry-list { display: grid; gap: 0.875rem; }
+.entry-card { padding: 0.875rem 1rem; border-radius: 0.625rem; background: #f8f8f6; }
+.entry-card time, .idea-card-preview time { color: #74746e; font-size: 0.6875rem; letter-spacing: 0.03em; }
+.entry-card p { margin: 0.25rem 0 0; font-size: 0.9375rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry-form { margin-top: 2.25rem; padding-top: 1.5rem; border-top: 1px solid #ededeb; }
+.empty-state { padding: 2rem 0; }
+.empty-state h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; line-height: 1.5; }
+.empty-state p, .error-page > p { margin: 0; color: #73736d; font-size: 0.9375rem; line-height: 1.6; }
+.error-page { display: flex; flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+
+@media (min-width: 640px) {
+  body { padding-top: 3rem; padding-bottom: 3rem; }
+  .home-sheet { min-height: calc(100svh - 6rem); padding: 2.5rem; }
+  .detail-sheet { padding: 2rem; min-height: calc(100svh - 10rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .idea-card { transition: none; }
+}

@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+apps/*/.next/
+apps/*/node_modules/
 
 # production
 /build
@@ -41,6 +43,7 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+apps/*/src/generated/prisma/
 
 # Prisma
 prisma/dev.db
