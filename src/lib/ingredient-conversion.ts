@@ -4,6 +4,7 @@ export type IngredientFields = {
   name: string;
   quantity: string;
   unit: string;
+  notes?: string;
 };
 
 export type IngredientDraft = IngredientFields & {
@@ -80,6 +81,9 @@ export function ingredientDraftError(draft: IngredientDraft): string | null {
   if (draft.quantity.trim().length > 50 || draft.unit.trim().length > 50) {
     return "Quantity and unit must each be 50 characters or fewer.";
   }
+  if ((draft.notes?.trim().length ?? 0) > 200) {
+    return "Ingredient notes must be 200 characters or fewer.";
+  }
   return null;
 }
 
@@ -91,6 +95,7 @@ export function convertedIngredients(drafts: IngredientDraft[]): IngredientField
     name: draft.name.trim(),
     quantity: draft.quantity.trim(),
     unit: draft.unit.trim(),
+    ...(draft.notes?.trim() ? { notes: draft.notes.trim() } : {}),
   }));
   if (!ingredients.length) throw new Error("Include at least one ingredient.");
   return ingredients;

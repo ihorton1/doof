@@ -47,6 +47,7 @@ export default async function EditDishPage({
             name: i.name,
             quantity: i.quantity,
             unit: i.unit,
+            notes: i.notes,
           })),
           tags: dish.tags.map((dt) => dt.tag.name),
         }}

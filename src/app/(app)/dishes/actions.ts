@@ -33,13 +33,14 @@ function parseDishForm(formData: FormData) {
   const names = formData.getAll("ingredient_name").map(String);
   const quantities = formData.getAll("ingredient_quantity").map(String);
   const units = formData.getAll("ingredient_unit").map(String);
+  const notes = formData.getAll("ingredient_notes").map(String);
 
   const ingredients = names
     .map((name, i) => ({
       name: name.trim().toLowerCase(),
       quantity: (quantities[i] ?? "").trim() || null,
       unit: normalizeIngredientUnit(units[i] ?? ""),
-      notes: null,
+      notes: (notes[i] ?? "").trim() || null,
     }))
     .filter((ing) => ing.name.length > 0);
 

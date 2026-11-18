@@ -14,6 +14,7 @@ const fields: { field: keyof IngredientFields; label: string; limit: number }[] 
   { field: "quantity", label: "Quantity", limit: 50 },
   { field: "unit", label: "Unit", limit: 50 },
   { field: "name", label: "Ingredient", limit: 200 },
+  { field: "notes", label: "Notes", limit: 200 },
 ];
 
 export function IngredientSentence({
@@ -62,35 +63,27 @@ export function IngredientSentence({
           ))}
         </div>
         <p role="status" className="text-xs text-slate-500 break-words">
-          {selection ? `Selected: ${selection}` : "Select one or more words, then assign them below."}
+          {selection ? `Selected: ${selection}` : "Select words, then assign them below. Tap a selected word again to deselect."}
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {fields.map(({ field, label }) => (
             <button
               key={field}
               type="button"
               disabled={!selection}
               onClick={() => assign(field)}
-              className="min-h-10 px-2 rounded-lg border border-emerald-600 text-xs text-emerald-700 dark:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="min-h-12 min-w-0 w-full break-words px-1 rounded-lg border border-emerald-600 text-xs text-emerald-700 dark:text-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {label}
             </button>
           ))}
-          <button
-            type="button"
-            disabled={!selected.length}
-            onClick={() => setSelected([])}
-            className="min-h-10 px-2 text-xs text-slate-500 disabled:opacity-40"
-          >
-            Clear selection
-          </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {fields.map(({ field, label, limit }) => (
-            <label key={field} className={`block text-xs font-medium ${field === "name" ? "col-span-2" : ""}`}>
+            <label key={field} className={`block text-xs font-medium ${field === "name" || field === "notes" ? "col-span-2" : ""}`}>
               {label}{field === "name" ? " (leave blank to skip)" : " (optional)"}
               <input
-                value={draft[field]}
+                value={draft[field] ?? ""}
                 maxLength={limit}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") event.preventDefault();
@@ -101,6 +94,9 @@ export function IngredientSentence({
             </label>
           ))}
         </div>
+        <p className="text-xs text-slate-500">
+          Ingredient notes appear on the dish, not on your shopping list.
+        </p>
         {error && <p className="text-xs text-amber-700 dark:text-amber-400">{error}</p>}
         <button
           type="button"

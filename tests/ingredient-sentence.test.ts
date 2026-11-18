@@ -26,3 +26,32 @@ test("import rows show suggested fields, editable word controls and accessible r
   assert.doesNotMatch(remove, />\s*Remove\s*</);
   assert.doesNotMatch(html, /touch-action|translateX|data-no-swipe/);
 });
+
+test("import assignment buttons fill four equal columns with mobile-sized tap targets", () => {
+  const html = renderToStaticMarkup(createElement(IngredientSentence, {
+    draft: createIngredientDraft("2 tablespoons olive oil"),
+    onChange() {},
+    onRemove() {},
+  }));
+  const controls = html.match(/<div class="grid grid-cols-4 gap-2">([\s\S]*?)<\/div>/)?.[1];
+  assert.ok(controls);
+  const buttons = controls.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
+  assert.equal(buttons.length, 4);
+  for (const [index, label] of ["Quantity", "Unit", "Ingredient", "Notes"].entries()) {
+    assert.ok(buttons[index].endsWith(`>${label}</button>`));
+    assert.match(buttons[index], /min-h-12 min-w-0 w-full/);
+    assert.match(buttons[index], /disabled=""/);
+  }
+  assert.doesNotMatch(html, /Clear selection/);
+  assert.match(html, /Tap a selected word again to deselect/);
+});
+
+test("ingredient import notes are optional, editable and limited to 200 characters", () => {
+  const html = renderToStaticMarkup(createElement(IngredientSentence, {
+    draft: { ...createIngredientDraft("227 g butter, softened"), notes: "softened" },
+    onChange() {},
+    onRemove() {},
+  }));
+  assert.match(html, /Notes \(optional\)<input[^>]*maxLength="200"[^>]*value="softened"/i);
+  assert.match(html, /Ingredient notes appear on the dish, not on your shopping list/);
+});

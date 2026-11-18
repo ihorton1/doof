@@ -131,3 +131,26 @@ test("field lengths match the dish-save constraints", () => {
   assert.match(ingredientDraftError({ ...draft, unit: draft.unit + "c" })!, /50/);
   assert.equal(ingredientDraftError({ ...draft, name: " " }), null);
 });
+
+test("ingredient notes are trimmed, preserved through conversion and restored by undo", () => {
+  const draft = { ...createIngredientDraft("227 g butter, softened"), name: "butter", notes: " softened " };
+  assert.deepEqual(convertedIngredients([draft]), [
+    { name: "butter", quantity: "227", unit: "g", notes: "softened" },
+  ]);
+  const removed = { ...draft, dismissed: true };
+  assert.throws(() => convertedIngredients([removed]), /at least one/);
+  assert.equal(convertedIngredients([{ ...removed, dismissed: false }])[0].notes, "softened");
+  assert.deepEqual(convertedIngredients([{ ...draft, notes: " " }]), [
+    { name: "butter", quantity: "227", unit: "g" },
+  ]);
+});
+
+test("ingredient note length is validated before applying an import", () => {
+  const draft = { ...createIngredientDraft("butter"), notes: "x".repeat(200) };
+  assert.equal(ingredientDraftError(draft), null);
+  const invalid = { ...draft, notes: draft.notes + "x" };
+  assert.match(ingredientDraftError(invalid)!, /notes.*200/);
+  assert.throws(() => convertedIngredients([invalid]), /Finish preparing/);
+  assert.equal(ingredientDraftError({ ...invalid, dismissed: true }), null);
+  assert.equal(ingredientDraftError({ ...invalid, name: "" }), null);
+});

@@ -156,3 +156,42 @@ test("invalid form ratings fail validation without creating or changing a dish",
   assert.equal(create.mock.callCount(), 0);
   assert.equal(update.mock.callCount(), 0);
 });
+
+test("creating and editing dishes save ingredient notes with their matching rows", async (t) => {
+  const { createDish, updateDish, create, update } = await setup(t);
+  const data = form();
+  for (const [name, note] of [
+    ["butter", "  room temperature  "],
+    ["", "omit this blank ingredient"],
+    ["garlic", "finely chopped"],
+    ["salt", "   "],
+  ]) {
+    data.append("ingredient_name", name);
+    data.append("ingredient_quantity", "1");
+    data.append("ingredient_unit", "g");
+    data.append("ingredient_notes", note);
+  }
+  const expected = [
+    { name: "butter", quantity: "1", unit: "g", notes: "room temperature", position: 0 },
+    { name: "garlic", quantity: "1", unit: "g", notes: "finely chopped", position: 1 },
+    { name: "salt", quantity: "1", unit: "g", notes: null, position: 2 },
+  ];
+  await assert.rejects(() => createDish(data), /NEXT_REDIRECT/);
+  assert.deepEqual(create.mock.calls[0].arguments[0].data.ingredients?.create, expected);
+  await assert.rejects(() => updateDish("dish-1", data), /NEXT_REDIRECT/);
+  assert.deepEqual(update.mock.calls[0].arguments[0].data.ingredients?.create, expected);
+});
+
+test("ingredient notes enforce the 200-character limit before writing", async (t) => {
+  const { createDish, updateDish, create, update } = await setup(t);
+  const data = form();
+  data.set("ingredient_name", "butter");
+  data.set("ingredient_notes", "x".repeat(201));
+  await assert.rejects(() => createDish(data), /200/);
+  await assert.rejects(() => updateDish("dish-1", data), /200/);
+  assert.equal(create.mock.callCount(), 0);
+  assert.equal(update.mock.callCount(), 0);
+  data.set("ingredient_notes", "x".repeat(200));
+  await assert.rejects(() => createDish(data), /NEXT_REDIRECT/);
+  assert.equal(create.mock.callCount(), 1);
+});
