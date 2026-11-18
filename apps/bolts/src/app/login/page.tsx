@@ -17,7 +17,7 @@ export default async function LoginPage({
     <main className="detail-shell">
       <article className="detail-sheet login-sheet">
         <header className="detail-header">
-          <p className="wordmark">bolts<span aria-hidden="true">.</span></p>
+          <p className="wordmark"><span aria-hidden="true">&#9889;</span>{" "}bolts<span aria-hidden="true">.</span></p>
           <h1>Your ideas, kept here.</h1>
           <p className="login-intro">Sign in to your bolts.</p>
         </header>

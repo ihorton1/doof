@@ -6,8 +6,12 @@ export const ideaTitleSchema = z.string()
   .min(1, "Give your idea a title.")
   .max(200, "Keep the title to 200 characters or fewer.");
 
+export const ideaIdSchema = z.cuid("This idea could not be found. Return to your ideas and try again.");
+
+export const activeIdeaWhere = { deletedAt: null } satisfies Prisma.IdeaWhereInput;
+
 export const entrySchema = z.object({
-  ideaId: z.cuid("This idea could not be found. Return to your ideas and try again."),
+  ideaId: ideaIdSchema,
   content: z.string()
     .trim()
     .min(1, "Write something to add to this idea.")
