@@ -1,11 +1,14 @@
 node_modules
 .next
+**/.next
+**/node_modules
 .git
 .github
 .vscode
 .idea
 *.log
 .env*
+**/.env*
 prisma/dev.db
 prisma/dev.db-journal
 src/generated/prisma/query_engine-*
