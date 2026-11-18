@@ -3,7 +3,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { config } from "dotenv";
 import { getPrisma } from "../apps/bolts/src/lib/prisma";
-import { ideaFeedSelect } from "../apps/bolts/src/lib/ideas";
+import { activeIdeaWhere, ideaFeedSelect } from "../apps/bolts/src/lib/ideas";
 
 config({ path: path.resolve(import.meta.dirname, "../apps/bolts/.env"), quiet: true });
 
@@ -60,6 +60,29 @@ test("Bolts persists ideas and dated entries only in its isolated development da
       select: ideaFeedSelect,
     });
     assert.deepEqual(emptySummary.entries, []);
+
+    const deletedAt = new Date();
+    await prisma.idea.update({
+      where: { id: first.id, ...activeIdeaWhere },
+      data: { deletedAt },
+    });
+    const retained = await prisma.idea.findUniqueOrThrow({
+      where: { id: first.id },
+      include: { entries: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+    });
+    assert.equal(retained.deletedAt?.toISOString(), deletedAt.toISOString());
+    assert.deepEqual(retained.entries, reread.entries, "Soft deletion must retain all original entries");
+    assert.equal(await prisma.idea.findUnique({ where: { id: first.id, ...activeIdeaWhere } }), null);
+    const active = await prisma.idea.findMany({
+      where: { id: { in: ids }, ...activeIdeaWhere },
+      select: ideaFeedSelect,
+    });
+    assert.deepEqual(active.map((idea) => idea.id), [second.id]);
+    await assert.rejects(prisma.idea.update({
+      where: { id: first.id, ...activeIdeaWhere },
+      data: { entries: { create: { content: "This stale entry must not be added" } } },
+    }), { code: "P2025" });
+    assert.equal(await prisma.ideaEntry.count({ where: { ideaId: first.id } }), 2);
 
     await prisma.idea.delete({ where: { id: first.id } });
     assert.equal(await prisma.ideaEntry.count({ where: { ideaId: first.id } }), 0);

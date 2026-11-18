@@ -2,20 +2,16 @@ import React from "react";
 import Link from "next/link";
 import type { IdeaSummary } from "../lib/ideas";
 import { EntryText } from "./entry-text";
-import { logout } from "../app/login/actions";
+import { UserMenu } from "./user-menu";
 
 export function IdeaList({ ideas }: { ideas: IdeaSummary[] }) {
   return (
     <main className="home-sheet">
       <header className="home-header">
-        <div>
-          <p className="wordmark">bolts<span aria-hidden="true">.</span></p>
-          <h1>Your bolts</h1>
-        </div>
-        <div className="feed-actions">
-          <Link href="/ideas/new" className="button button-primary">+ New idea</Link>
-          <form action={logout}><button className="sign-out">Sign out</button></form>
-        </div>
+        <p className="wordmark"><span aria-hidden="true">&#9889;</span>{" "}bolts<span aria-hidden="true">.</span></p>
+        <UserMenu />
+        <h1>Your bolts</h1>
+        <Link href="/ideas/new" className="button button-primary">+ New idea</Link>
       </header>
       {ideas.length === 0 ? (
         <div className="empty-state">

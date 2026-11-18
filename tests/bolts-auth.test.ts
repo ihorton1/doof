@@ -1,12 +1,24 @@
+import "next/dist/server/node-environment";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { test } from "node:test";
 import { NextRequest } from "next/server";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { passwordSession } from "../packages/auth/session";
-import { proxy } from "../apps/bolts/src/proxy";
+import { config, proxy } from "../apps/bolts/src/proxy";
 import { actionRedirectUrl, appPath, safeNextPath } from "../apps/bolts/src/lib/paths";
 import * as bolts from "../apps/bolts/src/lib/auth";
 import * as doof from "../src/lib/auth";
+
+test("Bolts proxy matches its normalized base-path root as well as private pages", () => {
+  const nextConfig = { basePath: "/bolts", trailingSlash: true };
+  for (const url of ["/bolts", "/bolts/", "/bolts/ideas/new", "/bolts/ideas/new/", "/bolts/settings/"]) {
+    assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig, url }), true, url);
+  }
+  for (const url of ["/bolts/_next/static/app.js", "/bolts/_next/image", "/bolts/favicon.ico"]) {
+    assert.equal(unstable_doesMiddlewareMatch({ config, nextConfig, url }), false, url);
+  }
+});
 
 test("password sessions preserve Doof cookie signatures and isolate Bolts", (context) => {
   const values = {
@@ -43,6 +55,13 @@ test("password sessions preserve Doof cookie signatures and isolate Bolts", (con
   const destination = new URL(unauthenticated.headers.get("location")!);
   assert.equal(destination.pathname, "/bolts/login");
   assert.equal(destination.searchParams.get("next"), "/ideas/new");
+  const settings = proxy(new NextRequest("https://example.com/bolts/settings/", {
+    nextConfig: { basePath: "/bolts" },
+    headers: { cookie: "bolts_theme=dark" },
+  }));
+  const settingsLogin = new URL(settings.headers.get("location")!);
+  assert.equal(settingsLogin.pathname, "/bolts/login/");
+  assert.equal(settingsLogin.searchParams.get("next"), "/settings");
   const authenticated = proxy(new NextRequest("https://example.com/bolts/", {
     nextConfig: { basePath: "/bolts" },
     headers: { cookie: `bolts_session=${cookie}` },

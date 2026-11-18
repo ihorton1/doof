@@ -15,6 +15,7 @@ model Idea {
   title     String      @db.VarChar(200)
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  deletedAt DateTime?
   entries   IdeaEntry[]
 }
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { Prisma } from "../generated/prisma/client";
-import { entrySchema, ideaTitleSchema, type SaveState } from "../lib/ideas";
+import { activeIdeaWhere, entrySchema, ideaIdSchema, ideaTitleSchema, type SaveState } from "../lib/ideas";
 import { getPrisma } from "../lib/prisma";
 import { requireSession } from "../lib/require-session";
 import { appPath } from "../lib/paths";
@@ -36,7 +36,7 @@ export async function addEntry(
 
   try {
     await getPrisma().idea.update({
-      where: { id: input.data.ideaId },
+      where: { id: input.data.ideaId, ...activeIdeaWhere },
       data: {
         updatedAt: new Date(),
         entries: { create: { content: input.data.content } },
@@ -53,4 +53,27 @@ export async function addEntry(
   revalidatePath(appPath());
   revalidatePath(appPath(`/ideas/${input.data.ideaId}`));
   return { saved: true };
+}
+
+export async function deleteIdea(ideaId: string): Promise<SaveState> {
+  await requireSession();
+  const input = ideaIdSchema.safeParse(ideaId);
+  if (!input.success) return { error: input.error.issues[0].message };
+
+  try {
+    await getPrisma().idea.update({
+      where: { id: input.data, ...activeIdeaWhere },
+      data: { deletedAt: new Date() },
+    });
+  } catch (error) {
+    console.error("Bolts: could not delete idea", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return { error: "This idea has already been deleted or no longer exists. Return to your bolts." };
+    }
+    return { error: "Your idea could not be deleted. Please try again." };
+  }
+
+  revalidatePath(appPath());
+  revalidatePath(appPath(`/ideas/${input.data}`));
+  return redirectAfterAction("/");
 }

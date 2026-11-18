@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useActionState, useState } from "react";
-import { addEntry, createIdea } from "../app/actions";
+import React, { useActionState, useRef, useState } from "react";
+import { addEntry, createIdea, deleteIdea } from "../app/actions";
 import type { SaveState } from "../lib/ideas";
 
 export function NewIdeaForm() {
@@ -67,5 +67,34 @@ export function NewEntryForm({ ideaId }: { ideaId: string }) {
         </button>
       </div>
     </form>
+  );
+}
+
+export function DeleteIdeaForm({ ideaId }: { ideaId: string }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const [state, action, pending] = useActionState<SaveState, FormData>(deleteIdea.bind(null, ideaId), {});
+
+  function cancel() {
+    const details = detailsRef.current;
+    if (details) {
+      details.open = false;
+      details.querySelector("summary")?.focus();
+    }
+  }
+
+  return (
+    <details className="delete-idea" ref={detailsRef}>
+      <summary>Delete idea</summary>
+      <form action={action} className="idea-form">
+        <p className="delete-confirmation">Are you sure?</p>
+        {state.error && <p role="alert" className="form-error">{state.error}</p>}
+        <div className="form-footer">
+          <button type="button" className="button button-secondary" disabled={pending} onClick={cancel}>Cancel</button>
+          <button type="submit" className="button button-danger" disabled={pending}>
+            {pending ? "Deleting..." : "Delete idea"}
+          </button>
+        </div>
+      </form>
+    </details>
   );
 }

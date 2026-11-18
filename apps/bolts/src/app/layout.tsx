@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import React, { type ReactNode } from "react";
+import { cookies } from "next/headers";
+import { THEME_COOKIE_NAME, getTheme } from "../lib/theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,16 +14,21 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#f5f5f3",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+export async function generateViewport(): Promise<Viewport> {
+  const theme = getTheme((await cookies()).get(THEME_COOKIE_NAME)?.value);
+  return {
+    themeColor: theme === "dark" ? "#141418" : "#f5f5f3",
+    colorScheme: theme,
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const theme = getTheme((await cookies()).get(THEME_COOKIE_NAME)?.value);
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme}>
       <body>{children}</body>
     </html>
   );

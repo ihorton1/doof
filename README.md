@@ -56,7 +56,15 @@ Adding an entry updates the idea's position on the home page.
 Titles are limited to 200 characters and entries to 20,000 characters.
 Empty states guide first use; no example data is inserted automatically.
 Save failures show an error and preserve your text for retrying.
-Editing, deletion and attachments are not implemented yet.
+**Delete idea** at the bottom of an idea page opens a confirmation. Confirming
+sets `Idea.deletedAt`; the idea and all entries remain stored, but the idea is
+hidden from the feed, its old URL returns not-found, and stale entry submissions
+are rejected. There is no restore UI yet.
+The user menu beside the wordmark contains **Settings** and **Sign out**.
+Settings offers **Light** and **Dark** appearance. Light is the default; the
+choice is remembered for a year in a Bolts-scoped browser cookie, applies across
+Bolts (including login), and does not change Doof's appearance or either database.
+Editing and attachments are not implemented yet.
 
 In another terminal, run Doof as usual with `npm run dev` (port 3000 by default).
 If Doof is already running on another port, leave it running. The apps have
@@ -79,6 +87,8 @@ docker run --rm --name doof-bolts --env-file .env --env-file apps\bolts\.env -p 
 
 Bolts' `/bolts` base path is fixed at build time. Next.js handles its internal
 navigation and assets beneath that prefix, and Nginx preserves it when proxying.
+Keep the proxy's explicit `/` matcher alongside its subroute matcher: development
+also checks the slash-stripped base-path root, otherwise the home page can be blank.
 Login requests have a small ingress rate limit in addition to the wrong-password
 delay. Unauthenticated page and mutation requests cannot access stored ideas.
 

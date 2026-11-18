@@ -11,6 +11,8 @@ import { entrySchema, ideaTitleSchema } from "../apps/bolts/src/lib/ideas";
 import manifest from "../apps/bolts/src/app/manifest";
 import Icon from "../apps/bolts/src/app/icon";
 import AppleIcon from "../apps/bolts/src/app/apple-icon";
+import { ThemeForm } from "../apps/bolts/src/app/settings/theme-form";
+import { getTheme, themeSchema } from "../apps/bolts/src/lib/theme";
 
 const ideaId = "cmivnlm9w0000356l5ih14d7z";
 
@@ -93,6 +95,28 @@ test("Bolts home shows linked idea cards with entry counts", () => {
   assert.doesNotMatch(html, /name="title"/);
 });
 
+test("feed header pairs the lightning wordmark with the user menu, then the heading with new idea", () => {
+  const document = parseDocument(renderToStaticMarkup(createElement(IdeaList, { ideas: [] })));
+  const header = DomUtils.findOne((node) => node.name === "header", document.children);
+  assert.ok(header);
+  const children = DomUtils.findAll((node) => node.parent === header, header.children);
+  assert.deepEqual(children.map((node) => node.name), ["p", "details", "h1", "a"]);
+  assert.equal(DomUtils.textContent(children[0]), "\u26a1 bolts.");
+  assert.equal(children[0].children[0].type, "tag");
+  const icon = DomUtils.findOne((node) => node.name === "span", children[0].children);
+  assert.equal(icon?.attribs["aria-hidden"], "true");
+  assert.equal(children[1].attribs.open, undefined);
+  const menuSummary = DomUtils.findOne((node) => node.name === "summary", children[1].children);
+  assert.equal(menuSummary?.attribs["aria-label"], "User menu");
+  const settings = DomUtils.findOne((node) => node.name === "a", children[1].children);
+  assert.equal(settings?.attribs.href, "/settings");
+  assert.equal(DomUtils.textContent(settings!), "Settings");
+  assert.ok(DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node) === "Sign out", children[1].children));
+  assert.equal(DomUtils.textContent(children[2]), "Your bolts");
+  assert.equal(DomUtils.textContent(children[3]), "+ New idea");
+  assert.equal(children[3].attribs.href, "/ideas/new");
+});
+
 test("feed ideas without entries do not invent preview text or an entry date", () => {
   const html = renderToStaticMarkup(createElement(IdeaList, {
     ideas: [{ id: ideaId, title: "Just started", _count: { entries: 0 }, entries: [] }],
@@ -142,7 +166,32 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
   assert.match(html, /href="\/"/);
   assert.match(html, /name="content"/);
   assert.match(html, /Add entry/);
+  const deletion = DomUtils.findOne((node) => node.name === "details" && node.attribs.class === "delete-idea", parseDocument(html).children);
+  assert.ok(deletion);
+  assert.equal(deletion.attribs.open, undefined);
+  const confirmation = DomUtils.findOne((node) => node.name === "p" && node.attribs.class === "delete-confirmation", deletion.children);
+  assert.ok(confirmation);
+  assert.equal(DomUtils.textContent(confirmation), "Are you sure?");
+  const cancel = DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node) === "Cancel", deletion.children);
+  assert.equal(cancel?.attribs.type, "button");
+  const confirm = DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node) === "Delete idea", deletion.children);
+  assert.equal(confirm?.attribs.type, "submit");
   assert.doesNotMatch(html, /Dated automatically when you save/);
+});
+
+test("appearance has exactly two validated choices and reflects the stored theme", () => {
+  for (const theme of ["light", "dark"] as const) {
+    const document = parseDocument(renderToStaticMarkup(createElement(ThemeForm, { theme })));
+    const choices = DomUtils.findAll((node) => node.name === "button" && node.attribs.name === "theme", document.children);
+    assert.deepEqual(choices.map((choice) => choice.attribs.value), ["light", "dark"]);
+    for (const choice of choices) assert.equal(choice.attribs["aria-pressed"], String(choice.attribs.value === theme));
+    assert.equal(themeSchema.parse(theme), theme);
+    assert.equal(getTheme(theme), theme);
+  }
+  assert.equal(themeSchema.safeParse("system").success, false);
+  assert.equal(themeSchema.safeParse(null).success, false);
+  assert.equal(getTheme(undefined), "light");
+  assert.equal(getTheme("invalid-cookie"), "light");
 });
 
 test("empty idea detail provides a first-entry prompt", () => {
