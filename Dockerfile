@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?sslmode=disable"
-RUN npx prisma generate
+RUN npx prisma generate && npm run db:generate --workspace=@doof/bolts
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build:apps
 
