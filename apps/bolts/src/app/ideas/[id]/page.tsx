@@ -10,7 +10,10 @@ export default async function IdeaPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const idea = await getPrisma().idea.findUnique({
     where: { id, ...activeIdeaWhere },
-    include: { entries: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] } },
+    include: { entries: {
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      include: { images: { orderBy: { position: "asc" }, select: { id: true } } },
+    } },
   });
   if (!idea) notFound();
   return <IdeaDetail idea={idea} />;

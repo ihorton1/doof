@@ -9,6 +9,7 @@ import { appPath } from "../lib/paths";
 import { redirectAfterAction } from "../lib/redirect";
 import { londonDayAfter, snoozeDays, SNOOZE_DAYS } from "../lib/idea-schedule";
 import { getIdeaPage, ideaPageRequestSchema, type IdeaPageResult } from "../lib/idea-feed";
+import { imageContentType, validateEntryImages } from "../lib/entry-images";
 
 export async function createIdea(_previous: SaveState, formData: FormData): Promise<SaveState> {
   await requireSession();
@@ -34,16 +35,35 @@ export async function addEntry(
   formData: FormData,
 ): Promise<SaveState> {
   await requireSession();
-  const input = entrySchema.safeParse({ ideaId, content: formData.get("content") });
+  const attachments = formData.getAll("images");
+  if (attachments.some((attachment) => !(attachment instanceof File))) {
+    return { error: "Paste PNG, JPEG, GIF or WebP images." };
+  }
+  const files = attachments.filter((attachment): attachment is File => attachment instanceof File);
+  const imageError = validateEntryImages(files);
+  if (imageError) return { error: imageError };
+  const input = entrySchema.safeParse({ ideaId, content: formData.get("content"), imageCount: files.length });
   if (!input.success) return { error: input.error.issues[0].message };
 
   try {
+    const images: Prisma.IdeaEntryImageCreateWithoutEntryInput[] = [];
+    for (const [position, file] of files.entries()) {
+      const data = new Uint8Array(await file.arrayBuffer());
+      const contentType = imageContentType(data);
+      if (!contentType || contentType !== file.type) {
+        return { error: "An image could not be read as PNG, JPEG, GIF or WebP. Paste another image." };
+      }
+      images.push({ data, contentType, position });
+    }
     await getPrisma().idea.update({
       where: { id: input.data.ideaId, ...activeIdeaWhere },
       data: {
         updatedAt: new Date(),
         pendingDismissal: true,
-        entries: { create: { content: input.data.content } },
+        entries: { create: {
+          content: input.data.content,
+          ...(images.length > 0 ? { images: { create: images } } : {}),
+        } },
       },
     });
   } catch (error) {
@@ -51,7 +71,7 @@ export async function addEntry(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return { error: "This idea no longer exists. Return to your ideas to start another." };
     }
-    return { error: "Your entry could not be saved. Your text is still here; please try again." };
+    return { error: "Your entry could not be saved. Your text and images are still here; please try again." };
   }
 
   revalidatePath(appPath());

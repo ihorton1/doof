@@ -325,6 +325,17 @@ h1 {
 .entry-card time, .idea-card-preview time { color: var(--muted); font-size: 0.6875rem; letter-spacing: 0.03em; }
 .entry-card p { margin: 0.25rem 0 0; font-size: 0.9375rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .entry-form { margin-top: 2.25rem; padding-top: 1.5rem; border-top: 1px solid var(--divider); }
+.entry-images { display: grid; gap: 0.75rem; margin-top: 0.75rem; }
+.entry-image-link { display: block; min-width: 0; }
+.entry-image { display: block; width: 100%; height: auto; max-height: 28rem; object-fit: contain; border-radius: 0.5rem; }
+.entry-images-compact { position: relative; z-index: 1; }
+.entry-images-compact .entry-image { max-height: 10rem; object-position: left; }
+.entry-image-error { display: grid; justify-items: start; gap: 0.5rem; }
+.entry-image-error .form-error { color: var(--error); }
+.image-drafts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+.image-drafts > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; min-width: 0; }
+.image-drafts .entry-image { max-height: 10rem; }
+.image-drafts .image-draft-remove { width: 2.75rem; padding: 0.625rem; }
 .empty-state { padding: 2rem 0; }
 .empty-state h2 { margin: 0 0 0.75rem; font-size: 1rem; font-weight: 600; line-height: 1.5; }
 .empty-state p, .error-page > p { margin: 0; color: var(--muted); font-size: 0.9375rem; line-height: 1.6; }

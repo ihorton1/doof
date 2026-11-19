@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   basePath: BASE_PATH,
   trailingSlash: true,
   outputFileTracingRoot: path.join(__dirname, "../.."),
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   turbopack: {
     root: path.join(__dirname, "../.."),
   },

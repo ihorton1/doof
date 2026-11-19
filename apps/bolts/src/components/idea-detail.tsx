@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { IdeaDetail as IdeaDetailData } from "../lib/ideas";
 import { DeleteIdeaForm, NewEntryForm, ReactivateIdeaForm } from "./idea-forms";
 import { EntryText } from "./entry-text";
+import { EntryImages } from "./entry-images";
 
 export function IdeaDetail({ idea }: { idea: IdeaDetailData }) {
   return (
@@ -31,7 +32,8 @@ export function IdeaDetail({ idea }: { idea: IdeaDetailData }) {
                 <time dateTime={entry.createdAt.toISOString()}>
                   {entry.createdAt.toISOString().slice(0, 10)}
                 </time>
-                <p><EntryText text={entry.content} /></p>
+                {entry.content && <p><EntryText text={entry.content} /></p>}
+                <EntryImages images={entry.images} />
               </li>
             ))}
           </ol>
