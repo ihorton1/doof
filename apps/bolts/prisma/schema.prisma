@@ -11,12 +11,18 @@ datasource db {
 }
 
 model Idea {
-  id        String      @id @default(cuid())
-  title     String      @db.VarChar(200)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  deletedAt DateTime?
-  entries   IdeaEntry[]
+  id               String      @id @default(cuid())
+  title            String      @db.VarChar(200)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  deletedAt        DateTime?
+  archivedAt       DateTime?
+  dueAt            DateTime    @default(now())
+  snoozeCount      Int         @default(0)
+  pendingDismissal Boolean     @default(false)
+  entries          IdeaEntry[]
+
+  @@index([deletedAt, archivedAt, dueAt, createdAt, id])
 }
 
 model IdeaEntry {

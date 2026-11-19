@@ -7,7 +7,7 @@ import { EntryText } from "../apps/bolts/src/components/entry-text";
 import { IdeaList } from "../apps/bolts/src/components/idea-list";
 import { IdeaDetail } from "../apps/bolts/src/components/idea-detail";
 import NewIdeaPage from "../apps/bolts/src/app/ideas/new/page";
-import { entrySchema, ideaTitleSchema } from "../apps/bolts/src/lib/ideas";
+import { entrySchema, ideaTitleSchema, type IdeaSummary } from "../apps/bolts/src/lib/ideas";
 import manifest from "../apps/bolts/src/app/manifest";
 import Icon from "../apps/bolts/src/app/icon";
 import AppleIcon from "../apps/bolts/src/app/apple-icon";
@@ -15,6 +15,13 @@ import { ThemeForm } from "../apps/bolts/src/app/settings/theme-form";
 import { getTheme, themeSchema } from "../apps/bolts/src/lib/theme";
 
 const ideaId = "cmivnlm9w0000356l5ih14d7z";
+const schedule = { dueAt: new Date("2026-11-18T00:00:00Z"), createdAt: new Date("2026-11-17T00:00:00Z"), snoozeCount: 0, archivedAt: null };
+function feed(ideas: IdeaSummary[]) {
+  return {
+    page: { ideas, nextCursor: null },
+    request: { kind: "due" as const, asOf: "2026-11-19T00:00:00.000Z", cursor: null },
+  };
+}
 
 test("entry text links web addresses without changing surrounding text or line breaks", () => {
   const html = renderToStaticMarkup(createElement(EntryText, {
@@ -52,12 +59,13 @@ test("unsafe schemes, invalid URLs and markup stay plain text", () => {
 });
 
 test("feed links are independently clickable without nesting anchors inside card navigation", () => {
-  const html = renderToStaticMarkup(createElement(IdeaList, {
-    ideas: [{
+  const html = renderToStaticMarkup(createElement(IdeaList, feed(
+    [{
+      ...schedule,
       id: ideaId, title: "A linked idea", _count: { entries: 1 },
       entries: [{ content: "https://example.com/resource", createdAt: new Date("2026-11-18T10:00:00Z") }],
     }],
-  }));
+  )));
   const links = DomUtils.findAll((node) => node.name === "a", parseDocument(html).children);
   assert.ok(links.some((link) => link.attribs.href === `/ideas/${ideaId}`));
   assert.ok(links.some((link) => link.attribs.href === "https://example.com/resource"));
@@ -67,18 +75,20 @@ test("feed links are independently clickable without nesting anchors inside card
 });
 
 test("Bolts home shows linked idea cards with entry counts", () => {
-  const html = renderToStaticMarkup(createElement(IdeaList, {
-    ideas: [
+  const html = renderToStaticMarkup(createElement(IdeaList, feed(
+    [
       {
+        ...schedule,
         id: ideaId, title: "Idea 1", _count: { entries: 1 },
         entries: [{ content: "The latest discovery.", createdAt: new Date("2026-11-18T10:00:00Z") }],
       },
       {
+        ...schedule,
         id: "cmivnlm9w0001356l5ih14d7z", title: "Idea 2", _count: { entries: 3 },
         entries: [{ content: "Another recent thought.", createdAt: new Date("2026-11-17T09:00:00Z") }],
       },
     ],
-  }));
+  )));
   assert.match(html, /<h1>Your bolts<\/h1>/);
   assert.match(html, /aria-label="Your bolts"/);
   assert.doesNotMatch(html, /Small thoughts\. Room to grow\./);
@@ -96,7 +106,7 @@ test("Bolts home shows linked idea cards with entry counts", () => {
 });
 
 test("feed header pairs the lightning wordmark with the user menu, then the heading with new idea", () => {
-  const document = parseDocument(renderToStaticMarkup(createElement(IdeaList, { ideas: [] })));
+  const document = parseDocument(renderToStaticMarkup(createElement(IdeaList, feed([]))));
   const header = DomUtils.findOne((node) => node.name === "header", document.children);
   assert.ok(header);
   const children = DomUtils.findAll((node) => node.parent === header, header.children);
@@ -117,10 +127,29 @@ test("feed header pairs the lightning wordmark with the user menu, then the head
   assert.equal(children[3].attribs.href, "/ideas/new");
 });
 
+test("feed search is a bottom navigation action after the feed, including when empty", () => {
+  const document = parseDocument(renderToStaticMarkup(createElement(IdeaList, feed([]))));
+  const main = DomUtils.findOne((node) => node.name === "main", document.children);
+  assert.ok(main);
+  assert.ok(main.attribs.class.split(" ").includes("due-feed"));
+  const children = DomUtils.findAll((node) => node.parent === main, main.children);
+  const navigation = children.at(-1);
+  assert.ok(navigation);
+  assert.equal(navigation.name, "nav");
+  assert.equal(navigation.attribs["aria-label"], "Bolts navigation");
+  const link = DomUtils.findOne((node) => node.name === "a", navigation.children);
+  assert.ok(link);
+  assert.equal(link.attribs.href, "/search");
+  assert.ok(link.attribs.class.split(" ").includes("feed-search"));
+  assert.equal(DomUtils.textContent(link).trim(), "Search bolts");
+  const icon = DomUtils.findOne((node) => node.name === "svg", link.children);
+  assert.equal(icon?.attribs["aria-hidden"], "true");
+});
+
 test("feed ideas without entries do not invent preview text or an entry date", () => {
-  const html = renderToStaticMarkup(createElement(IdeaList, {
-    ideas: [{ id: ideaId, title: "Just started", _count: { entries: 0 }, entries: [] }],
-  }));
+  const html = renderToStaticMarkup(createElement(IdeaList, feed(
+    [{ ...schedule, id: ideaId, title: "Just started", _count: { entries: 0 }, entries: [] }],
+  )));
   assert.match(html, /Just started/);
   assert.match(html, /0 entries/);
   assert.doesNotMatch(html, /<time/);
@@ -141,8 +170,9 @@ test("New idea opens a dedicated idea widget with a title form and a way back", 
 });
 
 test("Bolts empty home explains how to start without fake ideas", () => {
-  const html = renderToStaticMarkup(createElement(IdeaList, { ideas: [] }));
-  assert.match(html, /Every idea starts somewhere/);
+  const html = renderToStaticMarkup(createElement(IdeaList, feed([])));
+  assert.match(html, /Nothing due right now/);
+  assert.match(html, /href="\/search"/);
   assert.doesNotMatch(html, /class="idea-card"/);
 });
 
@@ -150,6 +180,8 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
   const html = renderToStaticMarkup(createElement(IdeaDetail, {
     idea: {
       id: ideaId,
+      pendingDismissal: false,
+      archivedAt: null,
       title: "Make a list of inspiring people",
       entries: [{
         id: "entry-1",
@@ -166,6 +198,10 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
   assert.match(html, /href="\/"/);
   assert.match(html, /name="content"/);
   assert.match(html, /Add entry/);
+  const entryForm = DomUtils.findOne((node) => node.name === "form" && node.attribs.class.includes("entry-form"), parseDocument(html).children);
+  assert.ok(entryForm);
+  assert.equal(DomUtils.findAll((node) => node.attribs.role === "status", entryForm.children).length, 0);
+  assert.doesNotMatch(html, /Entry saved/);
   const deletion = DomUtils.findOne((node) => node.name === "details" && node.attribs.class === "delete-idea", parseDocument(html).children);
   assert.ok(deletion);
   assert.equal(deletion.attribs.open, undefined);
@@ -196,7 +232,7 @@ test("appearance has exactly two validated choices and reflects the stored theme
 
 test("empty idea detail provides a first-entry prompt", () => {
   const html = renderToStaticMarkup(createElement(IdeaDetail, {
-    idea: { id: ideaId, title: "Something new", entries: [] },
+    idea: { id: ideaId, title: "Something new", entries: [], pendingDismissal: false, archivedAt: null },
   }));
   assert.match(html, /A place to build on this thought/);
   assert.match(html, /Add to this idea/);
@@ -206,6 +242,8 @@ test("idea titles and entry text are rendered as text, not markup", () => {
   const html = renderToStaticMarkup(createElement(IdeaDetail, {
     idea: {
       id: ideaId,
+      pendingDismissal: false,
+      archivedAt: null,
       title: "<script>alert(1)</script>",
       entries: [{ id: "1", content: "<img onerror=alert(1)>", createdAt: new Date() }],
     },

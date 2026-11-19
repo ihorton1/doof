@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export async function generateViewport(): Promise<Viewport> {
   const theme = getTheme((await cookies()).get(THEME_COOKIE_NAME)?.value);
   return {
-    themeColor: theme === "dark" ? "#141418" : "#f5f5f3",
+    themeColor: theme === "dark" ? "#15191e" : "#f4f6f8",
     colorScheme: theme,
     width: "device-width",
     initialScale: 1,
