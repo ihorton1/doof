@@ -52,6 +52,15 @@ without creating an idea. Saving opens `/bolts/ideas/<id>/`. Each idea page show
 and entries in oldest-first order, with an **Add to this idea** form. Entries
 are dated automatically when saved (displayed as ISO calendar dates in UTC).
 Text and line breaks are preserved; entries are plain text, not HTML.
+Paste images into the entry field to attach them, with or without a text note.
+The trash icon beside each preview removes it before **Add entry**; failed saves retain text and images
+for retrying. Each entry accepts up to four PNG, JPEG, GIF or WebP images with a
+combined limit of 4 MB. These limits appear in the form only as errors when exceeded.
+Saved images appear inline in their original order;
+click one to open it full size. The feed previews the latest entry's first image.
+Images are stored in the Bolts database, served only to signed-in users, and
+become inaccessible when their bolt is deleted. Clipboard images are supported
+on existing bolts; creating a new bolt still starts with its title.
 HTTP/HTTPS addresses and `www.` links are clickable in entries and feed previews,
 opening in a new tab while leaving Bolts open. Feed cards still open the idea
 when clicked outside an external link. Surrounding punctuation is not linked.
@@ -95,7 +104,7 @@ Bolts (including login), and does not change Doof's appearance or either databas
 Both themes pair cool slate typography and neutral, borderless buttons with
 small lightning-yellow accents. Links and keyboard focus remain clearly visible
 against each theme's surfaces.
-Editing and attachments are not implemented yet.
+Editing entries is not implemented yet.
 
 In another terminal, run Doof as usual with `npm run dev` (port 3000 by default).
 If Doof is already running on another port, leave it running. The apps have

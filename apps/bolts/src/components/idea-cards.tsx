@@ -6,6 +6,7 @@ import { loadIdeaPage } from "../app/actions";
 import type { IdeaPage, IdeaPageRequest } from "../lib/idea-feed";
 import { EntryText } from "./entry-text";
 import { SwipeIdeaCard } from "./swipe-idea-card";
+import { EntryImages } from "./entry-images";
 
 export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; request: IdeaPageRequest }) {
   const [page, setPage] = useState(initialPage);
@@ -74,7 +75,8 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
                   <time dateTime={latestEntry.createdAt.toISOString()}>
                     {latestEntry.createdAt.toISOString().slice(0, 10)}
                   </time>
-                  <p><EntryText text={latestEntry.content} /></p>
+                  {latestEntry.content && <p><EntryText text={latestEntry.content} /></p>}
+                  <EntryImages images={latestEntry.images} compact />
                 </div>
               )}
               <span className="idea-card-meta">

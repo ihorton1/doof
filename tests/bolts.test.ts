@@ -63,7 +63,7 @@ test("feed links are independently clickable without nesting anchors inside card
     [{
       ...schedule,
       id: ideaId, title: "A linked idea", _count: { entries: 1 },
-      entries: [{ content: "https://example.com/resource", createdAt: new Date("2026-11-18T10:00:00Z") }],
+      entries: [{ content: "https://example.com/resource", createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
     }],
   )));
   const links = DomUtils.findAll((node) => node.name === "a", parseDocument(html).children);
@@ -80,12 +80,12 @@ test("Bolts home shows linked idea cards with entry counts", () => {
       {
         ...schedule,
         id: ideaId, title: "Idea 1", _count: { entries: 1 },
-        entries: [{ content: "The latest discovery.", createdAt: new Date("2026-11-18T10:00:00Z") }],
+        entries: [{ content: "The latest discovery.", createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
       },
       {
         ...schedule,
         id: "cmivnlm9w0001356l5ih14d7z", title: "Idea 2", _count: { entries: 3 },
-        entries: [{ content: "Another recent thought.", createdAt: new Date("2026-11-17T09:00:00Z") }],
+        entries: [{ content: "Another recent thought.", createdAt: new Date("2026-11-17T09:00:00Z"), images: [] }],
       },
     ],
   )));
@@ -187,6 +187,7 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
         id: "entry-1",
         content: "A useful discovery.\nA second thought. https://example.com",
         createdAt: new Date("2026-11-18T10:00:00Z"),
+        images: [],
       }],
     },
   }));
@@ -245,7 +246,7 @@ test("idea titles and entry text are rendered as text, not markup", () => {
       pendingDismissal: false,
       archivedAt: null,
       title: "<script>alert(1)</script>",
-      entries: [{ id: "1", content: "<img onerror=alert(1)>", createdAt: new Date() }],
+      entries: [{ id: "1", content: "<img onerror=alert(1)>", createdAt: new Date(), images: [] }],
     },
   }));
   assert.match(html, /&lt;script&gt;/);
@@ -262,7 +263,7 @@ test("idea validation trims titles and enforces exact size limits", () => {
 
 test("entry validation requires an existing-style id and nonblank bounded content", () => {
   assert.deepEqual(entrySchema.parse({ ideaId, content: "  Keep\nthis  " }), {
-    ideaId, content: "Keep\nthis",
+    ideaId, content: "Keep\nthis", imageCount: 0,
   });
   assert.equal(entrySchema.safeParse({ ideaId, content: " " }).success, false);
   assert.equal(entrySchema.safeParse({ ideaId: "../other", content: "note" }).success, false);

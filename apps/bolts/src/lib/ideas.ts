@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Prisma } from "../generated/prisma/client";
+import { MAX_ENTRY_IMAGES } from "./entry-images";
 
 export const ideaTitleSchema = z.string()
   .trim()
@@ -14,8 +15,11 @@ export const entrySchema = z.object({
   ideaId: ideaIdSchema,
   content: z.string()
     .trim()
-    .min(1, "Write something to add to this idea.")
     .max(20000, "Keep each entry to 20,000 characters or fewer."),
+  imageCount: z.number().int().min(0).max(MAX_ENTRY_IMAGES).default(0),
+}).refine((entry) => entry.content.length > 0 || entry.imageCount > 0, {
+  message: "Write something or paste an image to add to this idea.",
+  path: ["content"],
 });
 
 export type SaveState = {
@@ -34,7 +38,11 @@ export const ideaFeedSelect = {
   entries: {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: 1,
-    select: { content: true, createdAt: true },
+    select: {
+      content: true,
+      createdAt: true,
+      images: { orderBy: { position: "asc" }, take: 1, select: { id: true } },
+    },
   },
 } satisfies Prisma.IdeaSelect;
 
@@ -45,5 +53,5 @@ export type IdeaDetail = {
   title: string;
   pendingDismissal: boolean;
   archivedAt: Date | null;
-  entries: { id: string; content: string; createdAt: Date }[];
+  entries: { id: string; content: string; createdAt: Date; images: { id: string }[] }[];
 };

@@ -26,11 +26,23 @@ model Idea {
 }
 
 model IdeaEntry {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   ideaId    String
-  content   String   @db.Text
-  createdAt DateTime @default(now())
-  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  content   String           @db.Text
+  createdAt DateTime         @default(now())
+  idea      Idea             @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  images    IdeaEntryImage[]
 
   @@index([ideaId, createdAt])
+}
+
+model IdeaEntryImage {
+  id          String    @id @default(cuid())
+  entryId     String
+  position    Int
+  contentType String    @db.VarChar(32)
+  data        Bytes
+  entry       IdeaEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, position])
 }

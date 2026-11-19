@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useActionState, useRef, useState } from "react";
+import React, { useActionState, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { addEntry, archiveIdea, createIdea, deleteIdea, dismissIdea, reactivateIdea, snoozeIdea } from "../app/actions";
 import type { IdeaSummary, SaveState } from "../lib/ideas";
 import { snoozeDays } from "../lib/idea-schedule";
+import { validateEntryImages } from "../lib/entry-images";
 
 export function NewIdeaForm() {
   const [title, setTitle] = useState("");
@@ -35,10 +37,38 @@ export function NewIdeaForm() {
 
 export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: string; pendingDismissal: boolean; archived: boolean }) {
   const [content, setContent] = useState("");
+  const [images, setImages] = useState<{ file: File; url: string }[]>([]);
+  const imagesRef = useRef(images);
+  const [imageError, setImageError] = useState("");
+  const [failedImages, setFailedImages] = useState<string[]>([]);
+
+  useEffect(() => () => {
+    for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
+  }, []);
+
+  function updateImages(next: typeof images) {
+    imagesRef.current = next;
+    setImages(next);
+  }
+
+  function removeImage(url: string) {
+    URL.revokeObjectURL(url);
+    updateImages(imagesRef.current.filter((image) => image.url !== url));
+    setFailedImages((current) => current.filter((failed) => failed !== url));
+    setImageError("");
+  }
+
   const [state, action, pending] = useActionState<SaveState, FormData>(
     async (previous, formData) => {
+      for (const image of images) formData.append("images", image.file);
       const result = await addEntry(ideaId, previous, formData);
-      if (result.saved) setContent("");
+      if (result.saved) {
+        setContent("");
+        for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
+        updateImages([]);
+        setImageError("");
+        setFailedImages([]);
+      }
       return result;
     },
     {},
@@ -47,7 +77,19 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
   const busy = pending || dismissPending;
 
   return (
-    <form action={action} className="idea-form entry-form">
+    <form action={action} className="idea-form entry-form" onPaste={(event) => {
+      const files = Array.from(event.clipboardData.files);
+      if (files.length === 0) return;
+      if (!event.clipboardData.getData("text/plain")) event.preventDefault();
+      if (busy) return;
+      const error = validateEntryImages([...images.map((image) => image.file), ...files]);
+      if (error) {
+        setImageError(error);
+        return;
+      }
+      updateImages([...imagesRef.current, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))]);
+      setImageError("");
+    }}>
       <label htmlFor="entry-content">Add to this idea</label>
       <textarea
         id="entry-content"
@@ -56,21 +98,38 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
         value={content}
         onChange={(event) => setContent(event.target.value)}
         rows={3}
-        required
+        required={images.length === 0}
         maxLength={20000}
         disabled={busy}
         aria-invalid={Boolean(state.error)}
         aria-describedby={state.error ? "entry-error" : undefined}
       />
+      {images.length > 0 && (
+        <ul className="image-drafts" aria-label="Images to add">
+          {images.map((image, index) => (
+            <li key={image.url}>
+              <Image src={image.url} alt={`Clipboard image ${index + 1} preview`} width={1200} height={900} unoptimized className="entry-image"
+                onError={() => setFailedImages((current) => current.includes(image.url) ? current : [...current, image.url])} />
+              <button type="button" className="button button-secondary image-draft-remove" disabled={busy} onClick={() => removeImage(image.url)} aria-label={`Remove image ${index + 1}`}>
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14h12l1-14M10 10v6m4-6v6" />
+                </svg>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {imageError && <p role="alert" className="form-error">{imageError}</p>}
+      {failedImages.length > 0 && <p role="alert" className="form-error">An image could not be displayed. Remove it and paste another image.</p>}
       {state.error && <p id="entry-error" role="alert" className="form-error">{state.error}</p>}
       {dismissState.error && <p role="alert" className="form-error">{dismissState.error}</p>}
       <div className="form-footer entry-actions">
-        {pendingDismissal && !archived && !content && (
+        {pendingDismissal && !archived && !content && images.length === 0 && (
           <button type="submit" formAction={dismissAction} formNoValidate className="button button-secondary done-for-now" disabled={busy}>
             {dismissPending ? "Saving..." : "Done for now"}
           </button>
         )}
-        <button type="submit" className="button button-primary" disabled={busy}>
+        <button type="submit" className="button button-primary" disabled={busy || failedImages.length > 0}>
           {pending ? "Saving..." : "Add entry"}
         </button>
       </div>

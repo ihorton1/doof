@@ -110,6 +110,7 @@ test("due pagination and literal search stay complete across ties and removed cu
           createdAt: new Date(i < 8 ? "1899-01-01T00:00:00Z" : "1899-01-02T00:00:00Z"),
         },
       });
+
       ids.push(idea.id);
     }
     const future = await prisma.idea.create({
@@ -173,5 +174,39 @@ test("due pagination and literal search stay complete across ties and removed cu
     assert.equal(archivedDetail.entries.length, 2, "Archiving must retain all entries");
   } finally {
     if (ids.length > 0) await prisma.idea.deleteMany({ where: { id: { in: ids } } });
+  }
+});
+
+test("entry images persist in order without entering feed payloads, survive archive and are hidden on deletion", async () => {
+  const prisma = getPrisma();
+  let ideaId: string | undefined;
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
+  try {
+    const databases = await prisma.$queryRaw<{ name: string }[]>`SELECT current_database() AS name`;
+    assert.equal(databases[0].name, "bolts_dev", "Refusing to write test data outside bolts_dev");
+    const idea = await prisma.idea.create({
+      data: { title: `Image integration ${randomUUID()}`, pendingDismissal: true, entries: { create: {
+        content: "",
+        images: { create: [1, 0].map((position) => ({ contentType: "image/png", position, data: png })) },
+      } } },
+      include: { entries: { include: { images: { orderBy: { position: "asc" } } } } },
+    });
+    ideaId = idea.id;
+    const images = idea.entries[0].images;
+    assert.deepEqual(images.map((image) => image.position), [0, 1]);
+    for (const image of images) assert.deepEqual(image.data, new Uint8Array(png));
+    const summary = await prisma.idea.findUniqueOrThrow({ where: { id: idea.id }, select: ideaFeedSelect });
+    assert.deepEqual(summary.entries[0].images, [{ id: images[0].id }]);
+    assert.equal(summary.entries[0].content, "");
+    const imageWhere = { id: images[0].id, entry: { idea: activeIdeaWhere } };
+    await prisma.idea.update({ where: { id: idea.id }, data: { archivedAt: new Date() } });
+    assert.ok(await prisma.ideaEntryImage.findFirst({ where: imageWhere }));
+    await prisma.idea.update({ where: { id: idea.id }, data: { deletedAt: new Date() } });
+    assert.equal(await prisma.ideaEntryImage.findFirst({ where: imageWhere }), null);
+    assert.equal(await prisma.ideaEntryImage.count({ where: { entryId: idea.entries[0].id } }), 2);
+    await prisma.idea.delete({ where: { id: idea.id } });
+    assert.equal(await prisma.ideaEntryImage.count({ where: { entryId: idea.entries[0].id } }), 0);
+  } finally {
+    if (ideaId) await prisma.idea.deleteMany({ where: { id: ideaId } });
   }
 });
