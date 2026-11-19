@@ -38,13 +38,16 @@ Also set `BOLTS_APP_PASSWORD` and an independent `BOLTS_COOKIE_SECRET` of at
 least 16 characters. These are server-only variables; keep them out of source
 control. Production stores them as Azure Container App secret references.
 
-The home page (`/bolts/`) lists your ideas, most recently updated first. Each card
+The home page (`/bolts/`) shows only due bolts, ordered by due time, then creation
+time (older first), then ID for stable ties. It initially loads 10 and loads the
+next 10 as you scroll; **Load more** also works without automatic scrolling.
+Each card
 previews the latest entry (up to three lines) and the date that entry was added,
 using the same UTC date format as the idea page. Ideas without entries show no
 preview or entry date. **New idea**
 opens a dedicated idea widget at `/bolts/ideas/new/`, where you enter a title.
 The editable heading starts with a grey **title...** placeholder.
-Nothing is saved until **Save idea** is used; **All ideas** returns to the feed
+Nothing is saved until **Save idea** is used; **Due bolts** returns to the feed
 without creating an idea. Saving opens `/bolts/ideas/<id>/`. Each idea page shows its title
 and entries in oldest-first order, with an **Add to this idea** form. Entries
 are dated automatically when saved (displayed as ISO calendar dates in UTC).
@@ -52,9 +55,34 @@ Text and line breaks are preserved; entries are plain text, not HTML.
 HTTP/HTTPS addresses and `www.` links are clickable in entries and feed previews,
 opening in a new tab while leaving Bolts open. Feed cards still open the idea
 when clicked outside an external link. Surrounding punctuation is not linked.
-Adding an entry updates the idea's position on the home page.
+Opening a bolt does not change its schedule. After adding an entry, **Done for
+now**, beside **Add entry**, dismisses it until midnight the next calendar day in **Europe/London** and
+resets its snooze sequence. Adding an entry alone does not dismiss the bolt.
+**Done for now** is hidden while there is an unsaved entry draft or the bolt is archived.
+Swipe left on a home-feed card to reveal **Snooze** and **Archive**, or use its
+three-dot **Actions** button with a mouse or keyboard. Swiping only reveals the
+actions; it never commits one automatically. Swipe right, tap elsewhere or press
+Escape to close them. Normal vertical scrolling and entry links remain available.
+**Snooze** hides a due bolt for successively 1, 3, 7, 14, 30 and 60 calendar days;
+further snoozes stay at 60 days. All intervals run from the action's London date,
+not the old due date, and respect daylight saving time. New ideas first surface
+the next day; existing ideas are immediately eligible after migration.
+The feed uses a fixed due-time cutoff while scrolling; refresh to see newly due
+bolts. There are no catch-up appearances after time away.
+The floating **Search bolts** button stays at the bottom of the viewport over the
+feed, above the device's safe area, with space to scroll the last card clear.
+It opens `/bolts/search/`, with case-insensitive literal matching
+against titles and all entries, including older entries and snoozed or archived bolts.
+Search results are also paged in batches of 10; deleted bolts are excluded.
+**Archive** stops automatic resurfacing without deleting the bolt or its entries.
+Archived bolts remain searchable and readable, can still receive new entries, and are labelled
+**Archived**. **Reactivate** on the bolt's detail page returns it to the due feed
+immediately and resets its snooze sequence.
+There is no separate all-bolts section on the home page. Scheduling is shared
+across devices using the app's existing single-password access.
 Titles are limited to 200 characters and entries to 20,000 characters.
 Empty states guide first use; no example data is inserted automatically.
+Saved entries appear directly on the bolt, without a separate success message.
 Save failures show an error and preserve your text for retrying.
 **Delete idea** at the bottom of an idea page opens a confirmation. Confirming
 sets `Idea.deletedAt`; the idea and all entries remain stored, but the idea is
@@ -64,6 +92,9 @@ The user menu beside the wordmark contains **Settings** and **Sign out**.
 Settings offers **Light** and **Dark** appearance. Light is the default; the
 choice is remembered for a year in a Bolts-scoped browser cookie, applies across
 Bolts (including login), and does not change Doof's appearance or either database.
+Both themes pair cool slate typography and neutral, borderless buttons with
+small lightning-yellow accents. Links and keyboard focus remain clearly visible
+against each theme's surfaces.
 Editing and attachments are not implemented yet.
 
 In another terminal, run Doof as usual with `npm run dev` (port 3000 by default).

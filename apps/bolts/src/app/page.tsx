@@ -1,15 +1,11 @@
 import React from "react";
 import { IdeaList } from "../components/idea-list";
-import { getPrisma } from "../lib/prisma";
-import { activeIdeaWhere, ideaFeedSelect } from "../lib/ideas";
+import { getIdeaPage, type IdeaPageRequest } from "../lib/idea-feed";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const ideas = await getPrisma().idea.findMany({
-    where: activeIdeaWhere,
-    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
-    select: ideaFeedSelect,
-  });
-  return <IdeaList ideas={ideas} />;
+  const request: IdeaPageRequest = { kind: "due", asOf: new Date().toISOString(), cursor: null };
+  const page = await getIdeaPage(request);
+  return <IdeaList page={page} request={request} />;
 }

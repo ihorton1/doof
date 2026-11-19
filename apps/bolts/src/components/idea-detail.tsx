@@ -1,18 +1,24 @@
 import React from "react";
 import Link from "next/link";
 import type { IdeaDetail as IdeaDetailData } from "../lib/ideas";
-import { DeleteIdeaForm, NewEntryForm } from "./idea-forms";
+import { DeleteIdeaForm, NewEntryForm, ReactivateIdeaForm } from "./idea-forms";
 import { EntryText } from "./entry-text";
 
 export function IdeaDetail({ idea }: { idea: IdeaDetailData }) {
   return (
     <main className="detail-shell">
-      <Link href="/" className="back-link"><span aria-hidden="true">&larr;</span> All ideas</Link>
+      <Link href="/" className="back-link"><span aria-hidden="true">&larr;</span> Due bolts</Link>
       <article className="detail-sheet">
         <header className="detail-header">
           <p className="wordmark"><span aria-hidden="true">&#9889;</span>{" "}bolts<span aria-hidden="true">.</span></p>
           <h1>{idea.title}</h1>
         </header>
+        {idea.archivedAt && (
+          <div className="archived-idea">
+            <span className="archive-badge">Archived</span>
+            <ReactivateIdeaForm ideaId={idea.id} />
+          </div>
+        )}
         {idea.entries.length === 0 ? (
           <div className="empty-state">
             <h2>A place to build on this thought.</h2>
@@ -30,7 +36,7 @@ export function IdeaDetail({ idea }: { idea: IdeaDetailData }) {
             ))}
           </ol>
         )}
-        <NewEntryForm ideaId={idea.id} />
+        <NewEntryForm ideaId={idea.id} pendingDismissal={idea.pendingDismissal} archived={Boolean(idea.archivedAt)} />
         <DeleteIdeaForm ideaId={idea.id} />
       </article>
     </main>

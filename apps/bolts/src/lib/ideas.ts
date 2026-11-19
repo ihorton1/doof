@@ -26,6 +26,10 @@ export type SaveState = {
 export const ideaFeedSelect = {
   id: true,
   title: true,
+  dueAt: true,
+  createdAt: true,
+  snoozeCount: true,
+  archivedAt: true,
   _count: { select: { entries: true } },
   entries: {
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -39,5 +43,7 @@ export type IdeaSummary = Prisma.IdeaGetPayload<{ select: typeof ideaFeedSelect 
 export type IdeaDetail = {
   id: string;
   title: string;
+  pendingDismissal: boolean;
+  archivedAt: Date | null;
   entries: { id: string; content: string; createdAt: Date }[];
 };
