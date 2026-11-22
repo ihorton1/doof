@@ -1,0 +1,3 @@
+ALTER TABLE "IdeaEntry"
+ADD COLUMN "isTodo" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "completedAt" TIMESTAMP(3);

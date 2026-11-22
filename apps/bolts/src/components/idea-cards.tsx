@@ -7,6 +7,7 @@ import type { IdeaPage, IdeaPageRequest } from "../lib/idea-feed";
 import { EntryText } from "./entry-text";
 import { SwipeIdeaCard } from "./swipe-idea-card";
 import { EntryImages } from "./entry-images";
+import { ideaLabel } from "../lib/ideas";
 
 export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; request: IdeaPageRequest }) {
   const [page, setPage] = useState(initialPage);
@@ -69,12 +70,13 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
           const latestEntry = idea.entries[0];
           const content = (
             <>
-              <Link className="idea-card-title" href={`/ideas/${idea.id}`}>{idea.title}</Link>
+              <Link className="idea-card-title" href={`/ideas/${idea.id}`}>{ideaLabel(idea.title)}</Link>
               {latestEntry && (
-                <div className="idea-card-preview">
+                <div className={`idea-card-preview${latestEntry.completedAt ? " todo-completed" : ""}`}>
                   <time dateTime={latestEntry.createdAt.toISOString()}>
                     {latestEntry.createdAt.toISOString().slice(0, 10)}
                   </time>
+                  {latestEntry.isTodo && <span className="todo-status">{latestEntry.completedAt ? "Completed" : "To-do"}</span>}
                   {latestEntry.content && <p><EntryText text={latestEntry.content} /></p>}
                   <EntryImages images={latestEntry.images} compact />
                 </div>
@@ -90,7 +92,7 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
               {request.kind === "due" ? (
                 <SwipeIdeaCard idea={idea} onRemoved={(action) => {
                     setPage((current) => ({ ...current, ideas: current.ideas.filter((item) => item.id !== idea.id) }));
-                    setNotice(`"${idea.title}" ${action}.`);
+                    setNotice(`"${ideaLabel(idea.title)}" ${action}.`);
                 }}>
                   {content}
                 </SwipeIdeaCard>

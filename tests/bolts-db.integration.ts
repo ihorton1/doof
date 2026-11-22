@@ -6,6 +6,7 @@ import { getPrisma } from "../apps/bolts/src/lib/prisma";
 import { activeIdeaWhere, ideaFeedSelect } from "../apps/bolts/src/lib/ideas";
 import { getIdeaPage, type IdeaPageRequest } from "../apps/bolts/src/lib/idea-feed";
 import { randomUUID } from "node:crypto";
+import { parseEntryContent } from "../apps/bolts/src/lib/entry-todos";
 
 config({ path: path.resolve(import.meta.dirname, "../apps/bolts/.env"), quiet: true });
 after(() => getPrisma().$disconnect());
@@ -48,6 +49,7 @@ test("Bolts persists ideas and dated entries only in its isolated development da
       "An earlier discovery", "Another thought\nwith two lines.",
     ]);
     assert.ok(reread.entries[1].createdAt instanceof Date);
+    assert.ok(reread.entries.every((entry) => !entry.isTodo && entry.completedAt === null));
     assert.ok(reread.entries[1].createdAt >= first.createdAt);
     assert.equal(await prisma.ideaEntry.count({ where: { ideaId: second.id } }), 0);
 
@@ -92,6 +94,46 @@ test("Bolts persists ideas and dated entries only in its isolated development da
     assert.equal(await prisma.ideaEntry.count({ where: { ideaId: first.id } }), 0);
   } finally {
     if (ids.length > 0) await prisma.idea.deleteMany({ where: { id: { in: ids } } });
+  }
+});
+
+test("to-do completion persists independently of notes, links and bolt scheduling", async () => {
+  const prisma = getPrisma();
+  const databases = await prisma.$queryRaw<{ name: string }[]>`SELECT current_database() AS name`;
+  assert.equal(databases[0].name, "bolts_dev", "Refusing to write test data outside bolts_dev");
+  const idea = await prisma.idea.create({
+    data: {
+      title: `Todo integration ${randomUUID()}`,
+      dueAt: new Date("2100-01-01T00:00:00Z"),
+      pendingDismissal: true,
+      entries: { create: [
+        parseEntryContent("[] Read https://example.com/article"),
+        { content: "Keep this note" },
+      ] },
+    },
+    include: { entries: true },
+  });
+  try {
+    const todo = idea.entries.find((entry) => entry.isTodo)!;
+    const note = idea.entries.find((entry) => !entry.isTodo)!;
+    const completedAt = new Date("2026-11-22T12:00:00Z");
+    const where = { id: todo.id, ideaId: idea.id, isTodo: true, idea: activeIdeaWhere };
+    assert.equal((await prisma.ideaEntry.updateMany({ where, data: { completedAt } })).count, 1);
+    assert.equal((await prisma.ideaEntry.findUniqueOrThrow({ where: { id: todo.id } })).completedAt?.toISOString(), completedAt.toISOString());
+    assert.equal((await prisma.ideaEntry.updateMany({ where: { ...where, id: note.id }, data: { completedAt } })).count, 0);
+    const reread = await prisma.idea.findUniqueOrThrow({ where: { id: idea.id }, select: ideaFeedSelect });
+    assert.equal(reread.dueAt.toISOString(), idea.dueAt.toISOString());
+    const unchanged = await prisma.idea.findUniqueOrThrow({ where: { id: idea.id } });
+    assert.equal(unchanged.updatedAt.toISOString(), idea.updatedAt.toISOString());
+    assert.equal(unchanged.pendingDismissal, true);
+    assert.equal((await prisma.ideaEntry.findUniqueOrThrow({ where: { id: note.id } })).completedAt, null);
+    assert.equal((await prisma.ideaEntry.findUniqueOrThrow({ where: { id: todo.id } })).content, "Read https://example.com/article");
+    assert.equal((await prisma.ideaEntry.updateMany({ where, data: { completedAt: null } })).count, 1);
+    assert.equal((await prisma.ideaEntry.findUniqueOrThrow({ where: { id: todo.id } })).completedAt, null);
+    await prisma.idea.update({ where: { id: idea.id }, data: { deletedAt: new Date() } });
+    assert.equal((await prisma.ideaEntry.updateMany({ where, data: { completedAt } })).count, 0);
+  } finally {
+    await prisma.idea.delete({ where: { id: idea.id } });
   }
 });
 

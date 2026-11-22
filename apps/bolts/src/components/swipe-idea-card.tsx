@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import type { IdeaSummary } from "../lib/ideas";
+import { ideaLabel, type IdeaSummary } from "../lib/ideas";
 import { ArchiveIdeaForm, SnoozeIdeaForm } from "./idea-forms";
 
 export function SwipeIdeaCard({ idea, onRemoved, children }: {
@@ -47,7 +47,7 @@ export function SwipeIdeaCard({ idea, onRemoved, children }: {
           type="button"
           className="card-actions-toggle"
           ref={toggle}
-          aria-label={`Actions for ${idea.title}`}
+          aria-label={`Actions for ${ideaLabel(idea.title)}`}
           aria-controls={actionsId}
           aria-expanded={expanded}
           onClick={() => reveal(!expanded)}
@@ -57,7 +57,7 @@ export function SwipeIdeaCard({ idea, onRemoved, children }: {
           </svg>
         </button>
       </article>
-      <div id={actionsId} className="swipe-actions" role="group" aria-label={`Actions for ${idea.title}`} onFocusCapture={() => reveal(true)}>
+      <div id={actionsId} className="swipe-actions" role="group" aria-label={`Actions for ${ideaLabel(idea.title)}`} onFocusCapture={() => reveal(true)}>
         <SnoozeIdeaForm idea={idea} onSnoozed={() => onRemoved("snoozed")} />
         <ArchiveIdeaForm idea={idea} onArchived={() => onRemoved("archived")} />
       </div>

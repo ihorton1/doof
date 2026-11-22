@@ -3,39 +3,25 @@
 import React, { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { addEntry, archiveIdea, createIdea, deleteIdea, dismissIdea, reactivateIdea, snoozeIdea } from "../app/actions";
-import type { IdeaSummary, SaveState } from "../lib/ideas";
+import { ideaLabel, type IdeaSummary, type SaveState } from "../lib/ideas";
+import { IdeaHeader } from "./idea-header";
 import { snoozeDays } from "../lib/idea-schedule";
 import { validateEntryImages } from "../lib/entry-images";
+import { parseEntryContent } from "../lib/entry-todos";
 
 export function NewIdeaForm() {
   const [title, setTitle] = useState("");
-  const [state, action, pending] = useActionState<SaveState, FormData>(createIdea, {});
-
   return (
-    <form action={action} className="idea-form">
-      <label htmlFor="idea-title" className="visually-hidden">Idea title</label>
-      <input
-        id="idea-title"
-        className="idea-title-input"
-        name="title"
-        placeholder="title..."
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        required
-        maxLength={200}
-        disabled={pending}
-        aria-invalid={Boolean(state.error)}
-        aria-describedby={state.error ? "idea-error" : undefined}
-      />
-      {state.error && <p id="idea-error" role="alert" className="form-error">{state.error}</p>}
-      <button className="button button-primary" disabled={pending}>
-        {pending ? "Saving..." : "Save idea"}
-      </button>
-    </form>
+    <>
+      <IdeaHeader title={title} onTitleChange={setTitle} />
+      <NewEntryForm title={title} />
+    </>
   );
 }
 
-export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: string; pendingDismissal: boolean; archived: boolean }) {
+export function NewEntryForm({ ideaId, title = "", pendingDismissal = false, archived = false }: {
+  ideaId?: string; title?: string; pendingDismissal?: boolean; archived?: boolean;
+}) {
   const [content, setContent] = useState("");
   const [images, setImages] = useState<{ file: File; url: string }[]>([]);
   const imagesRef = useRef(images);
@@ -61,7 +47,7 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
   const [state, action, pending] = useActionState<SaveState, FormData>(
     async (previous, formData) => {
       for (const image of images) formData.append("images", image.file);
-      const result = await addEntry(ideaId, previous, formData);
+      const result = ideaId ? await addEntry(ideaId, previous, formData) : await createIdea(previous, formData);
       if (result.saved) {
         setContent("");
         for (const image of imagesRef.current) URL.revokeObjectURL(image.url);
@@ -73,7 +59,7 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
     },
     {},
   );
-  const [dismissState, dismissAction, dismissPending] = useActionState<SaveState, FormData>(dismissIdea.bind(null, ideaId), {});
+  const [dismissState, dismissAction, dismissPending] = useActionState<SaveState, FormData>(dismissIdea.bind(null, ideaId ?? ""), {});
   const busy = pending || dismissPending;
 
   return (
@@ -90,7 +76,8 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
       updateImages([...imagesRef.current, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))]);
       setImageError("");
     }}>
-      <label htmlFor="entry-content">Add to this idea</label>
+      {!ideaId && <input type="hidden" name="title" value={title} />}
+      <label htmlFor="entry-content" className={ideaId ? undefined : "visually-hidden"}>{ideaId ? "Add to this idea" : "Entry"}</label>
       <textarea
         id="entry-content"
         name="content"
@@ -98,6 +85,7 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
         value={content}
         onChange={(event) => setContent(event.target.value)}
         rows={3}
+        autoFocus
         required={images.length === 0}
         maxLength={20000}
         disabled={busy}
@@ -124,7 +112,8 @@ export function NewEntryForm({ ideaId, pendingDismissal, archived }: { ideaId: s
       {state.error && <p id="entry-error" role="alert" className="form-error">{state.error}</p>}
       {dismissState.error && <p role="alert" className="form-error">{dismissState.error}</p>}
       <div className="form-footer entry-actions">
-        {pendingDismissal && !archived && !content && images.length === 0 && (
+        {parseEntryContent(content).isTodo && <span className="todo-draft" role="status">To-do</span>}
+        {ideaId && pendingDismissal && !archived && !content && images.length === 0 && (
           <button type="submit" formAction={dismissAction} formNoValidate className="button button-secondary done-for-now" disabled={busy}>
             {dismissPending ? "Saving..." : "Done for now"}
           </button>
@@ -147,7 +136,7 @@ export function SnoozeIdeaForm({ idea, onSnoozed }: { idea: IdeaSummary; onSnooz
   return (
     <form action={action} className="swipe-action-form snooze-form">
       {state.error && <p role="alert" className="form-error">{state.error}</p>}
-      <button className="button button-secondary" disabled={pending} aria-label={`Snooze ${idea.title} for ${days} ${days === 1 ? "day" : "days"}`}>
+      <button className="button button-secondary" disabled={pending} aria-label={`Snooze ${ideaLabel(idea.title)} for ${days} ${days === 1 ? "day" : "days"}`}>
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
           <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
         </svg>
@@ -167,7 +156,7 @@ export function ArchiveIdeaForm({ idea, onArchived }: { idea: IdeaSummary; onArc
   return (
     <form action={action} className="swipe-action-form archive-form">
       {state.error && <p role="alert" className="form-error">{state.error}</p>}
-      <button className="button button-archive" disabled={pending} aria-label={`Archive ${idea.title}`}>
+      <button className="button button-archive" disabled={pending} aria-label={`Archive ${ideaLabel(idea.title)}`}>
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
           <path d="M4 8v12h16V8M3 3h18v5H3zM9 12h6" />
         </svg>
