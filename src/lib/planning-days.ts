@@ -8,16 +8,21 @@ export type ChooseDishAction = (input: { dishId: string; date: string }) => Prom
 >;
 
 export function getPlanningDays(todayIso: string) {
-  const today = fromISODate(todayIso);
-  return Array.from({ length: PLANNING_DAYS }, (_, index) => {
-    const date = addDays(today, index);
-    return {
-      iso: toISODate(date),
-      label: index === 0 ? "Today" : index === 1 ? "Tomorrow" : date.toLocaleDateString("en-GB", {
-        weekday: "long", day: "numeric", month: "short",
-      }),
-    };
-  });
+  return Array.from({ length: PLANNING_DAYS }, (_, index) => pickerDay(todayIso, index));
+}
+
+export function getReschedulingDays(todayIso: string) {
+  return Array.from({ length: 15 }, (_, index) => pickerDay(todayIso, index - 7));
+}
+
+function pickerDay(todayIso: string, offset: number) {
+  const date = addDays(fromISODate(todayIso), offset);
+  return {
+    iso: toISODate(date),
+    label: offset === 0 ? "Today" : offset === 1 ? "Tomorrow" : offset === -1 ? "Yesterday" : date.toLocaleDateString("en-GB", {
+      weekday: "long", day: "numeric", month: "short",
+    }),
+  };
 }
 
 export function isPlanningDay(iso: string, todayIso: string): boolean {

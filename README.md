@@ -181,7 +181,10 @@ autocomplete as Plan, or focus a meal card and press **T**. Freeform meals canno
 be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
 400 ms pause to distinguish multi-taps; swiping cancels pending taps.
 Double-tap/click a meal card (including freeform meals), or focus it and press
-**R**, to reschedule that occurrence using a date picker. Saving moves the
+**R**, to reschedule that occurrence using the same scrolling day picker as Plan.
+It offers the previous seven days, today and the next seven days, based on the
+real current date even when browsing another day. It starts on the meal's current
+date when available, otherwise today. Saving moves the
 existing entry, including across weeks, without replacing other meals or changing
 its cooked/skipped status or cleared-leftovers flag. A duplicate saved dish on
 the destination day is rejected. Today refreshes after saving, recalculating

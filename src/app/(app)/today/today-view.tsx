@@ -174,6 +174,7 @@ export function TodayView({
         <ReschedulePicker
           key={rescheduling.id}
           meal={rescheduling}
+          todayIso={leftoversTodayIso}
           rescheduleAction={rescheduleAction}
           onClose={() => setRescheduling(null)}
           onSaved={(date) => {
