@@ -8,6 +8,7 @@ import { getLeftovers, getLeftoverWindow, getManualLeftoverWindow } from "@/lib/
 import { dismissLeftovers } from "./dismiss-leftovers";
 import { addLeftovers } from "./add-leftovers";
 import { setDishRating } from "../dishes/set-dish-rating";
+import { rescheduleMeal } from "./reschedule-meal";
 
 export const dynamic = "force-dynamic";
 
@@ -115,6 +116,7 @@ export default async function TodayPage({
       nextFocusIso={toISODate(addDays(focus, 1))}
       addTagAction={addDishTag}
       setRatingAction={setDishRating}
+      rescheduleAction={rescheduleMeal}
       tagSuggestions={tagSuggestions}
       leftovers={getLeftovers(leftoverEntries.map((entry) => ({
         ...entry,

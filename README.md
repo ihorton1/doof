@@ -179,7 +179,14 @@ down the page to Leftovers rather than scrolling the horizontal carousel vertica
 Triple-tap any saved-dish card to add a persistent recipe tag using the same
 autocomplete as Plan, or focus a meal card and press **T**. Freeform meals cannot
 be tagged. Single taps retain recipe-title and adjacent-day navigation, with a
-400 ms pause to distinguish triple taps; swiping cancels pending taps.
+400 ms pause to distinguish multi-taps; swiping cancels pending taps.
+Double-tap/click a meal card (including freeform meals), or focus it and press
+**R**, to reschedule that occurrence using a date picker. Saving moves the
+existing entry, including across weeks, without replacing other meals or changing
+its cooked/skipped status or cleared-leftovers flag. A duplicate saved dish on
+the destination day is rejected. Today refreshes after saving, recalculating
+automatic leftover dates and countdowns from the new meal date; moving a meal to
+today or the future removes it from automatic leftovers until it becomes a past meal.
 
 Scroll past the last recipe card to reach **Leftovers** below Today's recipes.
 Use **Add leftovers** to enter a name and cooked date for something outside your
