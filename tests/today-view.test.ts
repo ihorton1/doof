@@ -21,6 +21,7 @@ function renderToday(entries: Entry[]) {
     nextFocusIso: "2026-10-31",
     addTagAction: async ({ tag }) => ({ status: "added", tag } as const),
     setRatingAction: async ({ rating }) => ({ rating }),
+    rescheduleAction: async () => ({ status: "rescheduled" } as const),
     tagSuggestions: ["fast", "vegetarian", "lyse friendly"],
     leftovers: [],
     addLeftoversAction: async () => ({ status: "added" } as const),
@@ -136,10 +137,20 @@ test("saved dishes offer triple-tap tagging and a keyboard alternative without t
     { ...dish, id: "entry-2", dishId: null, dishName: null, dishImageUrl: null, dishTags: [], freeformText: "Leftovers" },
   ]);
   assert.match(html, /Triple-tap a dish to add a tag/);
-  assert.match(html, /data-tag-dish="dish-1" tabindex="0" aria-keyshortcuts="t" aria-describedby="today-tag-help"/);
-  assert.match(html, /<article aria-label="Leftovers" class=/);
+  assert.match(html, /data-tag-dish="dish-1" data-meal-entry="entry-1" tabindex="0" aria-keyshortcuts="r t" aria-describedby="today-tag-help"/);
+  assert.match(html, /<article aria-label="Leftovers"[^>]*class=/);
   assert.doesNotMatch(html, /data-tag-dish="null"/);
   assert.doesNotMatch(html, /<dialog/);
+});
+
+test("saved and freeform meal occurrences expose rescheduling and keyboard help", () => {
+  const html = renderToday([
+    dish,
+    { ...dish, id: "entry-2", dishId: null, dishName: null, dishImageUrl: null, dishTags: [], freeformText: "Takeaway" },
+  ]);
+  assert.match(html, /Double-tap a meal to reschedule it/);
+  assert.match(html, /data-meal-entry="entry-2" tabindex="0" aria-keyshortcuts="r"/);
+  assert.match(html, /data-meal-entry="entry-1"/);
 });
 
 test("single meals fill the available carousel height", () => {

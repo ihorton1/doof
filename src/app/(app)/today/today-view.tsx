@@ -13,6 +13,8 @@ import { LeftoversView } from "./leftovers-view";
 import { DishRatingControl } from "@/components/dish-rating-control";
 import { DishRatingBadge } from "@/components/dish-rating-badge";
 import type { DishRating, SetDishRatingAction } from "@/lib/dish-ratings";
+import type { RescheduleMealAction } from "./reschedule-meal";
+import { ReschedulePicker } from "./reschedule-picker";
 
 const useIsoLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
@@ -38,6 +40,8 @@ type Day = {
 };
 
 type TaggingDish = { id: string; name: string; tags: string[] };
+type ReschedulingMeal = { id: string; name: string; date: string };
+type MealClick = ReschedulingMeal & { dish: TaggingDish | null; href: string | null };
 
 export function TodayView({
   days,
@@ -46,6 +50,7 @@ export function TodayView({
   nextFocusIso,
   addTagAction,
   setRatingAction,
+  rescheduleAction,
   tagSuggestions,
   leftovers,
   addLeftoversAction,
@@ -59,6 +64,7 @@ export function TodayView({
   nextFocusIso: string;
   addTagAction: AddDishTagAction;
   setRatingAction: SetDishRatingAction;
+  rescheduleAction: RescheduleMealAction;
   tagSuggestions: string[];
   leftovers: Leftover[];
   addLeftoversAction: AddLeftoversAction;
@@ -68,28 +74,37 @@ export function TodayView({
 }) {
   const router = useRouter();
   const [tagging, setTagging] = useState<TaggingDish | null>(null);
+  const [rescheduling, setRescheduling] = useState<ReschedulingMeal | null>(null);
   const [message, setMessage] = useState("");
   const clicks = useMemo(() => {
     const navigate = ({ href }: { href: string | null }) => {
       if (href) router.push(href);
     };
-    return createRecipeClicks<TaggingDish & { href: string | null }>({
+    return createRecipeClicks<MealClick>({
       single: navigate,
-      double: navigate,
-      triple: setTagging,
+      double: setRescheduling,
+      triple: (meal) => { if (meal.dish) setTagging(meal.dish); },
     });
   }, [router]);
 
   useEffect(() => () => clicks.cancel(), [clicks, focusIso]);
 
-  function getDish(target: EventTarget) {
+  function getMeal(target: EventTarget) {
     if (!(target instanceof Element)) return null;
-    if (target.closest("[data-rating-control]")) return null;
-    const id = target.closest<HTMLElement>("[data-tag-dish]")?.dataset.tagDish;
-    const entry = days.flatMap(day => day.entries).find(entry => entry.dishId === id);
-    return entry?.dishId
-      ? { id: entry.dishId, name: entry.dishName ?? "Recipe", tags: entry.dishTags }
-      : null;
+    if (target.closest("dialog, button, input, [data-rating-control]")) return null;
+    const id = target.closest<HTMLElement>("[data-meal-entry]")?.dataset.mealEntry;
+    for (const day of days) {
+      const entry = day.entries.find(entry => entry.id === id);
+      if (entry) return {
+        id: entry.id,
+        name: entry.dishName ?? entry.freeformText ?? "Meal",
+        date: day.iso,
+        dish: entry.dishId
+          ? { id: entry.dishId, name: entry.dishName ?? "Recipe", tags: entry.dishTags }
+          : null,
+      };
+    }
+    return null;
   }
 
   return (
@@ -100,29 +115,31 @@ export function TodayView({
           clicks.cancel();
           return;
         }
-        const dish = getDish(event.target);
-        if (!dish || !(event.target instanceof Element)) {
+        const meal = getMeal(event.target);
+        if (!meal || !(event.target instanceof Element)) {
           clicks.cancel();
           return;
         }
-        // Capture before Next's links navigate so triple taps can finish.
+        // Capture before Next's links navigate so multi-taps can finish.
         event.preventDefault();
         const href = event.target.closest("a")?.getAttribute("href") ?? null;
-        clicks.click({ ...dish, href });
+        clicks.click({ ...meal, href });
       }}
       onKeyDownCapture={(event) => {
-        if (event.altKey || event.ctrlKey || event.metaKey || event.key.toLowerCase() !== "t") return;
-        const dish = getDish(event.target);
-        if (!dish) return;
+        if (event.altKey || event.ctrlKey || event.metaKey) return;
+        const key = event.key.toLowerCase();
+        const meal = getMeal(event.target);
+        if (!meal || (key !== "r" && (key !== "t" || !meal.dish))) return;
         event.preventDefault();
         clicks.cancel();
-        setTagging(dish);
+        if (key === "r") setRescheduling(meal);
+        else setTagging(meal.dish);
       }}
       onScrollCapture={() => clicks.cancel()}
       onPointerCancelCapture={() => clicks.cancel()}
       onDragStartCapture={() => clicks.cancel()}
     >
-      <p id="today-tag-help" className="sr-only">Triple-tap a dish to add a tag. Keyboard: focus a meal card and press T.</p>
+      <p id="today-tag-help" className="sr-only">Double-tap a meal to reschedule it. Keyboard: focus a meal card and press R. Triple-tap a dish to add a tag, or press T.</p>
       <p role="status" className="sr-only">{message}</p>
       <MobileCarousel days={days} focusIso={focusIso} setRatingAction={setRatingAction} />
 
@@ -150,6 +167,19 @@ export function TodayView({
           onAdded={(tag, duplicate) => {
             setMessage(`${tagging.name} ${duplicate ? "already has" : "tagged with"} "${tag}".`);
             setTagging(null);
+          }}
+        />
+      )}
+      {rescheduling && (
+        <ReschedulePicker
+          key={rescheduling.id}
+          meal={rescheduling}
+          rescheduleAction={rescheduleAction}
+          onClose={() => setRescheduling(null)}
+          onSaved={(date) => {
+            setMessage(`${rescheduling.name} rescheduled to ${date}.`);
+            setRescheduling(null);
+            router.refresh();
           }}
         />
       )}
@@ -376,9 +406,10 @@ function PlannedMeals({
             key={entry.id}
             aria-label={title}
             data-tag-dish={entry.dishId ?? undefined}
-            tabIndex={entry.dishId && !inLink ? 0 : undefined}
-            aria-keyshortcuts={entry.dishId && !inLink ? "t" : undefined}
-            aria-describedby={entry.dishId ? "today-tag-help" : undefined}
+            data-meal-entry={entry.id}
+            tabIndex={!inLink ? 0 : undefined}
+            aria-keyshortcuts={!inLink ? entry.dishId ? "r t" : "r" : undefined}
+            aria-describedby="today-tag-help"
             className={cn(
               "flex min-w-0 touch-manipulation select-none flex-col gap-4 snap-start rounded-[2rem] border bg-white p-5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-slate-900 md:p-3",
               emphasized
