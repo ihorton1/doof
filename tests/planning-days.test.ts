@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { getPlanningDays, isPlanningDay } from "../src/lib/planning-days";
+import { getPlanningDays, getReschedulingDays, isPlanningDay } from "../src/lib/planning-days";
 
 test("day picker has exactly 30 consecutive days beginning with today and tomorrow", () => {
   const days = getPlanningDays("2026-10-30");
@@ -28,5 +28,29 @@ test("server validation accepts only real dates within the displayed range", () 
   for (const day of getPlanningDays("2026-10-30")) assert.equal(isPlanningDay(day.iso, "2026-10-30"), true);
   for (const invalid of ["2026-10-29", "2026-11-29", "2026-02-30", "2026-13-01", "not-a-date", "2026-10-30T00:00:00Z", ""]) {
     assert.equal(isPlanningDay(invalid, "2026-10-30"), false, invalid);
+  }
+});
+
+test("rescheduling offers exactly seven previous days, today and seven future days", () => {
+  const days = getReschedulingDays("2026-11-22");
+  assert.equal(days.length, 15);
+  assert.equal(days[0].iso, "2026-11-15");
+  assert.deepEqual(days[6], { iso: "2026-11-21", label: "Yesterday" });
+  assert.deepEqual(days[7], { iso: "2026-11-22", label: "Today" });
+  assert.deepEqual(days[8], { iso: "2026-11-23", label: "Tomorrow" });
+  assert.equal(days[14].iso, "2026-11-29");
+  assert.equal(new Set(days.map(day => day.iso)).size, 15);
+});
+
+test("rescheduling ranges cross years, leap days and daylight saving by calendar day", () => {
+  for (const [today, first, last] of [
+    ["2027-01-02", "2026-12-26", "2027-01-09"],
+    ["2028-03-01", "2028-02-23", "2028-03-08"],
+    ["2026-03-30", "2026-03-23", "2026-04-06"],
+    ["2026-10-26", "2026-10-19", "2026-11-02"],
+  ]) {
+    const days = getReschedulingDays(today);
+    assert.equal(days[0].iso, first);
+    assert.equal(days[14].iso, last);
   }
 });

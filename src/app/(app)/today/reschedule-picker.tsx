@@ -1,25 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { X } from "lucide-react";
+import { DayScrollPicker } from "@/components/day-scroll-picker";
+import { getReschedulingDays } from "@/lib/planning-days";
 import type { RescheduleMealAction } from "./reschedule-meal";
 
-export function ReschedulePicker({ meal, rescheduleAction, onClose, onSaved }: {
+export function ReschedulePicker({ meal, todayIso, rescheduleAction, onClose, onSaved }: {
   meal: { id: string; name: string; date: string };
+  todayIso: string;
   rescheduleAction: RescheduleMealAction;
   onClose: () => void;
   onSaved: (date: string) => void;
 }) {
-  const [date, setDate] = useState(meal.date);
+  const days = getReschedulingDays(todayIso);
+  const originalIndex = days.findIndex(day => day.iso === meal.date);
+  const [selectedIndex, setSelectedIndex] = useState(originalIndex < 0 ? 7 : originalIndex);
+  const date = days[selectedIndex].iso;
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
-  const input = useRef<HTMLInputElement>(null);
   const saving = useRef(false);
 
   useEffect(() => {
     const el = dialog.current;
     el?.showModal();
-    input.current?.focus();
     return () => { el?.close(); };
   }, []);
 
@@ -36,7 +41,10 @@ export function ReschedulePicker({ meal, rescheduleAction, onClose, onSaved }: {
       }}
       className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xs overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-4 text-slate-900 shadow-xl backdrop:bg-black/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
-      <h2 id="reschedule-title" className="break-words text-xl font-extrabold text-emerald-800 dark:text-emerald-300">Reschedule {meal.name}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 id="reschedule-title" className="break-words text-xl font-extrabold text-emerald-800 dark:text-emerald-300">Reschedule {meal.name}</h2>
+        <button type="button" disabled={pending} onClick={onClose} aria-label="Close day picker" className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-5" /></button>
+      </div>
       <form
         className="mt-4 space-y-4"
         onSubmit={(event) => {
@@ -58,19 +66,14 @@ export function ReschedulePicker({ meal, rescheduleAction, onClose, onSaved }: {
           });
         }}
       >
-        <label className="block text-sm font-medium">
-          Meal date
-          <input
-            ref={input}
-            type="date"
-            name="date"
-            required
-            value={date}
-            onChange={(event) => { setDate(event.target.value); setError(""); }}
-            disabled={pending}
-            className="mt-1 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
-          />
-        </label>
+        <DayScrollPicker
+          days={days}
+          selectedIndex={selectedIndex}
+          onSelect={(index) => { setSelectedIndex(index); setError(""); }}
+          pending={pending}
+          idPrefix="reschedule-day"
+        />
+        {originalIndex < 0 && <p className="text-sm text-slate-500 dark:text-slate-400">The current meal date ({meal.date}) is outside this range. Choose a new date.</p>}
         <p className="text-sm text-slate-500 dark:text-slate-400">Leftover time is recalculated from this date.</p>
         {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2">

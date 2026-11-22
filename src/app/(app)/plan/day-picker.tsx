@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { DayScrollPicker } from "@/components/day-scroll-picker";
 import { getPlanningDays, type ChooseDishAction } from "@/lib/planning-days";
 
 export function DayPicker({ dish, todayIso, addDishAction, onClose, onAdded }: {
@@ -17,23 +17,12 @@ export function DayPicker({ dish, todayIso, addDishAction, onClose, onAdded }: {
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
-  const list = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = dialog.current;
     el?.showModal();
-    list.current?.focus();
     return () => { el?.close(); };
   }, []);
-
-  function select(index: number) {
-    const el = list.current;
-    if (!el) return;
-    const option = el.children[index];
-    if (!(option instanceof HTMLElement)) return;
-    setSelectedIndex(index);
-    el.scrollTo({ top: option.offsetTop - (el.clientHeight - option.clientHeight) / 2, behavior: "instant" });
-  }
 
   return (
     <dialog
@@ -52,43 +41,13 @@ export function DayPicker({ dish, todayIso, addDishAction, onClose, onAdded }: {
         <h2 id="day-picker-title" className="break-words text-xl font-extrabold text-emerald-800 dark:text-emerald-300">Plan {dish.name}</h2>
         <button type="button" disabled={pending} onClick={onClose} aria-label="Close day picker" className="flex size-11 shrink-0 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"><X className="size-5" /></button>
       </div>
-      <div className="relative">
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950" />
-        <div
-          ref={list}
-          role="listbox"
-          aria-label="Day to cook"
-          aria-activedescendant={`planning-day-${days[selectedIndex].iso}`}
-          aria-disabled={pending}
-          tabIndex={0}
-          onKeyDown={(event) => {
-            if (pending) return;
-            const offsets: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, PageDown: 7, PageUp: -7 };
-            const offset = offsets[event.key];
-            if (offset !== undefined || event.key === "Home" || event.key === "End") {
-              event.preventDefault();
-              select(event.key === "Home" ? 0 : event.key === "End" ? days.length - 1 : Math.max(0, Math.min(days.length - 1, selectedIndex + offset)));
-            }
-          }}
-          onScroll={() => {
-            const el = list.current;
-            if (!el || pending) return;
-            setSelectedIndex(Math.max(0, Math.min(days.length - 1, Math.round(el.scrollTop / 48))));
-          }}
-          className={cn("relative h-36 snap-y snap-mandatory overflow-y-auto overscroll-contain py-12 no-scrollbar focus-visible:outline-none focus-visible:[&_[aria-selected=true]]:underline", pending && "pointer-events-none overflow-hidden")}
-        >
-          {days.map((day, index) => (
-            <div
-              key={day.iso}
-              id={`planning-day-${day.iso}`}
-              role="option"
-              aria-selected={selectedIndex === index}
-              onClick={() => { if (!pending) select(index); }}
-              className={cn("flex h-12 shrink-0 cursor-pointer snap-center items-center justify-center px-2 text-center", selectedIndex === index ? "font-bold text-emerald-800 dark:text-emerald-300" : "text-slate-500 dark:text-slate-400")}
-            >{day.label}</div>
-          ))}
-        </div>
-      </div>
+      <DayScrollPicker
+        days={days}
+        selectedIndex={selectedIndex}
+        onSelect={setSelectedIndex}
+        pending={pending}
+        idPrefix="planning-day"
+      />
       {error && <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
       <button
         type="button"
