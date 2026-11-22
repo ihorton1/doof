@@ -63,7 +63,7 @@ test("feed links are independently clickable without nesting anchors inside card
     [{
       ...schedule,
       id: ideaId, title: "A linked idea", _count: { entries: 1 },
-      entries: [{ content: "https://example.com/resource", createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
+      entries: [{ content: "https://example.com/resource", isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
     }],
   )));
   const links = DomUtils.findAll((node) => node.name === "a", parseDocument(html).children);
@@ -80,12 +80,12 @@ test("Bolts home shows linked idea cards with entry counts", () => {
       {
         ...schedule,
         id: ideaId, title: "Idea 1", _count: { entries: 1 },
-        entries: [{ content: "The latest discovery.", createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
+        entries: [{ content: "The latest discovery.", isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
       },
       {
         ...schedule,
         id: "cmivnlm9w0001356l5ih14d7z", title: "Idea 2", _count: { entries: 3 },
-        entries: [{ content: "Another recent thought.", createdAt: new Date("2026-11-17T09:00:00Z"), images: [] }],
+        entries: [{ content: "Another recent thought.", isTodo: false, completedAt: null, createdAt: new Date("2026-11-17T09:00:00Z"), images: [] }],
       },
     ],
   )));
@@ -156,17 +156,21 @@ test("feed ideas without entries do not invent preview text or an entry date", (
   assert.doesNotMatch(html, /idea-card-preview/);
 });
 
-test("New idea opens a dedicated idea widget with a title form and a way back", () => {
+test("New idea starts with a focused entry editor and an optional title in the options menu", () => {
   const html = renderToStaticMarkup(createElement(NewIdeaPage));
   assert.match(html, /class="detail-sheet"/);
   assert.match(html, /<h1 class="visually-hidden">New idea<\/h1>/);
-  assert.match(html, /name="title"/);
-  assert.match(html, /placeholder="title\.\.\."/);
-  assert.match(html, /class="idea-title-input"/);
-  assert.match(html, /<label[^>]*>Idea title<\/label>/);
-  assert.match(html, /Save idea/);
+  assert.match(html, /aria-label="Bolt options"/);
+  assert.match(html, /Add title/);
+  assert.match(html, /name="content"/);
+  assert.doesNotMatch(html, /Start with an entry/);
+  const label = DomUtils.findOne((node) => node.name === "label" && node.attribs.for === "entry-content", parseDocument(html).children);
+  assert.equal(label?.attribs.class, "visually-hidden");
+  assert.equal(DomUtils.textContent(label!), "Entry");
+  assert.match(html, /<textarea[^>]*autofocus/i);
+  assert.match(html, /Add entry/);
   assert.match(html, /href="\/"/);
-  assert.doesNotMatch(html, /name="content"/);
+  assert.doesNotMatch(html, /idea-title-input|Save idea|Save title/);
 });
 
 test("Bolts empty home explains how to start without fake ideas", () => {
@@ -186,6 +190,8 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
       entries: [{
         id: "entry-1",
         content: "A useful discovery.\nA second thought. https://example.com",
+        isTodo: false,
+        completedAt: null,
         createdAt: new Date("2026-11-18T10:00:00Z"),
         images: [],
       }],
@@ -200,6 +206,8 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
   assert.match(html, /name="content"/);
   assert.match(html, /Add entry/);
   const entryForm = DomUtils.findOne((node) => node.name === "form" && node.attribs.class.includes("entry-form"), parseDocument(html).children);
+  assert.match(html, /Edit title/);
+  assert.match(html, /<textarea[^>]*autofocus/i);
   assert.ok(entryForm);
   assert.equal(DomUtils.findAll((node) => node.attribs.role === "status", entryForm.children).length, 0);
   assert.doesNotMatch(html, /Entry saved/);
@@ -214,6 +222,19 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
   const confirm = DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node) === "Delete idea", deletion.children);
   assert.equal(confirm?.attribs.type, "submit");
   assert.doesNotMatch(html, /Dated automatically when you save/);
+});
+
+test("untitled bolts keep accessible navigation and expose Add title without a visible placeholder heading", () => {
+  const idea = { ...schedule, id: ideaId, title: "", pendingDismissal: false, entries: [] };
+  const html = renderToStaticMarkup(createElement(IdeaDetail, { idea }));
+  assert.match(html, /<h1 class="visually-hidden">Untitled bolt<\/h1>/);
+  assert.match(html, /Add title/);
+  assert.doesNotMatch(html, /idea-title-input|Edit title/);
+  const feedHtml = renderToStaticMarkup(createElement(IdeaList, feed([{ ...idea, _count: { entries: 0 } }])));
+  assert.match(feedHtml, new RegExp(`href="/ideas/${ideaId}"[^>]*>Untitled bolt</a>`));
+  assert.match(feedHtml, /Actions for Untitled bolt/);
+  assert.match(feedHtml, /Snooze Untitled bolt for 1 day/);
+  assert.match(feedHtml, /Archive Untitled bolt/);
 });
 
 test("appearance has exactly two validated choices and reflects the stored theme", () => {
@@ -246,7 +267,7 @@ test("idea titles and entry text are rendered as text, not markup", () => {
       pendingDismissal: false,
       archivedAt: null,
       title: "<script>alert(1)</script>",
-      entries: [{ id: "1", content: "<img onerror=alert(1)>", createdAt: new Date(), images: [] }],
+      entries: [{ id: "1", content: "<img onerror=alert(1)>", isTodo: false, completedAt: null, createdAt: new Date(), images: [] }],
     },
   }));
   assert.match(html, /&lt;script&gt;/);
@@ -256,7 +277,8 @@ test("idea titles and entry text are rendered as text, not markup", () => {
 
 test("idea validation trims titles and enforces exact size limits", () => {
   assert.equal(ideaTitleSchema.parse("  A thought  "), "A thought");
-  assert.equal(ideaTitleSchema.safeParse(" ").success, false);
+  assert.equal(ideaTitleSchema.parse(" "), "");
+  assert.equal(ideaTitleSchema.parse(""), "");
   assert.equal(ideaTitleSchema.safeParse("a".repeat(200)).success, true);
   assert.equal(ideaTitleSchema.safeParse("a".repeat(201)).success, false);
 });

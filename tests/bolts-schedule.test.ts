@@ -16,7 +16,7 @@ import { createSessionCookieValue, SESSION_COOKIE_NAME } from "../apps/bolts/src
 import { getPrisma } from "../apps/bolts/src/lib/prisma";
 import type { Idea, Prisma } from "../apps/bolts/src/generated/prisma/client";
 import type { IdeaSummary } from "../apps/bolts/src/lib/ideas";
-import { addEntry, archiveIdea, createIdea, dismissIdea, loadIdeaPage, reactivateIdea, snoozeIdea } from "../apps/bolts/src/app/actions";
+import { addEntry, archiveIdea, createIdea, dismissIdea, loadIdeaPage, reactivateIdea, snoozeIdea, updateIdeaTitle } from "../apps/bolts/src/app/actions";
 
 const ideaId = "cmivnlm9w0000356l5ih14d7z";
 const dueRequest: IdeaPageRequest = { kind: "due", asOf: "2026-11-19T12:00:00.000Z", cursor: null };
@@ -206,10 +206,69 @@ test("new bolts are scheduled for the next London day", async (t) => {
   const { create } = await setup(t);
   const data = new FormData();
   data.set("title", "A fresh idea");
+  data.set("content", "First entry");
   await assert.rejects(() => createIdea({}, data), /NEXT_REDIRECT/);
   const dueAt = create.mock.calls[0].arguments[0].data.dueAt;
   assert.ok(dueAt instanceof Date);
   assert.equal(dueAt.toISOString(), londonDayAfter(new Date(), 1).toISOString());
+  assert.equal(create.mock.calls[0].arguments[0].data.pendingDismissal, true);
+  assert.deepEqual(create.mock.calls[0].arguments[0].data.entries, { create: { content: "First entry", isTodo: false } });
+});
+
+test("a bolt can be created without a title, but not without an entry", async (t) => {
+  const { create } = await setup(t);
+  const data = new FormData();
+  data.set("content", "  Start typing  ");
+  await assert.rejects(() => createIdea({}, data), /NEXT_REDIRECT/);
+  assert.equal(create.mock.calls[0].arguments[0].data.title, "");
+  assert.deepEqual(create.mock.calls[0].arguments[0].data.entries, { create: { content: "Start typing", isTodo: false } });
+  data.set("content", " ");
+  assert.match((await createIdea({}, data)).error!, /Write something/);
+  data.set("content", "Entry");
+  data.set("title", "a".repeat(201));
+  assert.match((await createIdea({}, data)).error!, /200 characters/);
+  assert.equal(create.mock.callCount(), 1);
+});
+
+test("adding, editing and removing a title does not change entries or scheduling", async (t) => {
+  const { update, revalidate } = await setup(t);
+  for (const [submitted, expected] of [["  A title  ", "A title"], ["A new title", "A new title"], [" ", ""]]) {
+    const data = new FormData();
+    data.set("title", submitted);
+    assert.deepEqual(await updateIdeaTitle(ideaId, {}, data), { saved: true });
+    const args = update.mock.calls.at(-1)!.arguments[0];
+    assert.deepEqual(args.where, { id: ideaId, deletedAt: null });
+    assert.deepEqual(args.data, { title: expected });
+  }
+  assert.deepEqual(revalidate.mock.calls.slice(0, 3).map((call) => call.arguments[0]), [
+    "/bolts/", "/bolts/search", `/bolts/ideas/${ideaId}`,
+  ]);
+});
+
+test("invalid titles and IDs cannot update a bolt, and save failures are surfaced", async (t) => {
+  const { update, revalidate } = await setup(t);
+  const data = new FormData();
+  data.set("title", "a".repeat(201));
+  assert.match((await updateIdeaTitle(ideaId, {}, data)).error!, /200 characters/);
+  data.set("title", "Valid title");
+  assert.ok((await updateIdeaTitle("invalid", {}, data)).error);
+  assert.equal(update.mock.callCount(), 0);
+  update.mock.mockImplementation(async () => { throw new Error("test database unavailable"); });
+  const log = t.mock.method(console, "error", () => {});
+  assert.match((await updateIdeaTitle(ideaId, {}, data)).error!, /could not be saved/);
+  assert.equal(log.mock.callCount(), 1);
+  assert.equal(revalidate.mock.callCount(), 0);
+});
+
+test("creating bolts and changing titles requires a session", async (t) => {
+  const { create, update } = await setup(t, false);
+  const data = new FormData();
+  data.set("content", "Entry");
+  data.set("title", "Title");
+  await assert.rejects(() => createIdea({}, data), /NEXT_REDIRECT/);
+  await assert.rejects(() => updateIdeaTitle(ideaId, {}, data), /NEXT_REDIRECT/);
+  assert.equal(create.mock.callCount(), 0);
+  assert.equal(update.mock.callCount(), 0);
 });
 
 test("feed shows snooze duration, separate search navigation, and pagination fallback", () => {

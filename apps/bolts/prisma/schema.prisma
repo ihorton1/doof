@@ -26,12 +26,14 @@ model Idea {
 }
 
 model IdeaEntry {
-  id        String           @id @default(cuid())
-  ideaId    String
-  content   String           @db.Text
-  createdAt DateTime         @default(now())
-  idea      Idea             @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  images    IdeaEntryImage[]
+  id          String           @id @default(cuid())
+  ideaId      String
+  content     String           @db.Text
+  isTodo      Boolean          @default(false)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  idea        Idea             @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  images      IdeaEntryImage[]
 
   @@index([ideaId, createdAt])
 }

@@ -45,13 +45,31 @@ Each card
 previews the latest entry (up to three lines) and the date that entry was added,
 using the same UTC date format as the idea page. Ideas without entries show no
 preview or entry date. **New idea**
-opens a dedicated idea widget at `/bolts/ideas/new/`, where you enter a title.
-The editable heading starts with a grey **title...** placeholder.
-Nothing is saved until **Save idea** is used; **Due bolts** returns to the feed
-without creating an idea. Saving opens `/bolts/ideas/<id>/`. Each idea page shows its title
-and entries in oldest-first order, with an **Add to this idea** form. Entries
+opens a dedicated idea widget at `/bolts/ideas/new/`, focused on the entry editor.
+Titles are optional: use the top-right three-dot menu's **Add title** option,
+or **Edit title** on a titled bolt. Clearing a title leaves the bolt untitled.
+Nothing is saved until **Add entry** is used; **Due bolts** returns to the feed
+without creating an idea. Saving creates the bolt and its first entry together and
+opens `/bolts/ideas/<id>/`. Untitled feed cards are labelled **Untitled bolt**.
+Each idea page shows its title, when present, and entries in oldest-first order,
+with a focused **Add to this idea** form. Changing a title leaves entries and
+scheduling unchanged. Entries
 are dated automatically when saved (displayed as ISO calendar dates in UTC).
 Text and line breaks are preserved; entries are plain text, not HTML.
+Start an entry with `[]` to make the whole entry a to-do, for example
+`[] Read this article`. A **To-do** indicator appears while typing; the prefix is
+removed when saved. To-do entries have a checkbox to complete or reopen them,
+and completed text is struck through. Completion is saved without changing the
+bolt's schedule or **Done for now** state. Entries without the prefix remain
+notes, including existing entries. To-dos can contain multiple lines, links and
+images; their links still appear in the **Links** tab.
+Use an entry's pencil button to edit its text. Attached images appear as
+thumbnails with an **x** in the top-right to stage removal. **Save entry** applies
+the text edits and image removals together, keeping the original date and any
+remaining images; **Cancel** leaves everything unchanged. An entry must retain
+some text or at least one image. Adding or removing the
+leading `[]` changes it between a to-do and a note. Editing a completed to-do
+keeps it completed unless it is converted to a note.
 Paste images into the entry field to attach them, with or without a text note.
 The trash icon beside each preview removes it before **Add entry**; failed saves retain text and images
 for retrying. Each entry accepts up to four PNG, JPEG, GIF or WebP images with a
@@ -60,10 +78,16 @@ Saved images appear inline in their original order;
 click one to open it full size. The feed previews the latest entry's first image.
 Images are stored in the Bolts database, served only to signed-in users, and
 become inaccessible when their bolt is deleted. Clipboard images are supported
-on existing bolts; creating a new bolt still starts with its title.
+on both new and existing bolts.
 HTTP/HTTPS addresses and `www.` links are clickable in entries and feed previews,
 opening in a new tab while leaving Bolts open. Feed cards still open the idea
 when clicked outside an external link. Surrounding punctuation is not linked.
+Each bolt has **Entries**, **To-dos** and **Links** tabs. **To-dos** collects all
+to-do entries, including completed ones, in entry order. Tasks can be checked or
+edited there as well as in **Entries**. **Links** lists web addresses from
+all saved entries in entry order, with the domain, URL and entry date. Repeated
+links remain listed where they were shared; no external previews are fetched.
+Links open in a new tab. Switching views preserves unsaved entry drafts.
 Opening a bolt does not change its schedule. After adding an entry, **Done for
 now**, beside **Add entry**, dismisses it until midnight the next calendar day in **Europe/London** and
 resets its snooze sequence. Adding an entry alone does not dismiss the bolt.

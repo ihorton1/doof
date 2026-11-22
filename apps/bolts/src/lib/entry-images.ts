@@ -1,8 +1,13 @@
 import { appPath } from "./paths";
+import { z } from "zod";
 
 export const MAX_ENTRY_IMAGES = 4;
 export const MAX_ENTRY_IMAGE_BYTES = 4 * 1024 * 1024;
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
+
+export const removedEntryImageIdsSchema = z.array(z.cuid("This image could not be found. Refresh the page and try again."))
+  .max(MAX_ENTRY_IMAGES, "Remove up to four images at a time.")
+  .refine((ids) => new Set(ids).size === ids.length, "Each image can only be removed once.");
 
 export function validateEntryImages(images: readonly Pick<File, "size" | "type">[]): string | undefined {
   if (images.length > MAX_ENTRY_IMAGES) return "Keep each entry to four images or fewer.";

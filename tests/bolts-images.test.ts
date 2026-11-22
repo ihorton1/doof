@@ -7,7 +7,7 @@ import nextHeaders from "next/headers";
 import nextCache from "next/cache";
 import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { RequestCookiesAdapter } from "next/dist/server/web/spec-extension/adapters/request-cookies";
-import { addEntry } from "../apps/bolts/src/app/actions";
+import { addEntry, createIdea, updateIdeaTitle } from "../apps/bolts/src/app/actions";
 import { GET } from "../apps/bolts/src/app/images/[id]/route";
 import { createSessionCookieValue, SESSION_COOKIE_NAME } from "../apps/bolts/src/lib/auth";
 import { entryImagePath, imageContentType, MAX_ENTRY_IMAGE_BYTES, validateEntryImages } from "../apps/bolts/src/lib/entry-images";
@@ -52,19 +52,59 @@ async function setup(t: TestContext, authenticated = true) {
   const revalidate = t.mock.method(nextCache, "revalidatePath", () => {});
   const prisma = getPrisma();
   const update = t.mock.fn<(_args: Prisma.IdeaUpdateArgs) => Promise<Idea>>(async () => ({ ...record }));
+  const create = t.mock.fn<(_args: Prisma.IdeaCreateArgs) => Promise<Idea>>(async () => ({ ...record }));
   const findFirst = t.mock.fn<(_args: Prisma.IdeaEntryImageFindFirstArgs) => Promise<{ data: Uint8Array; contentType: string } | null>>(
     async () => ({ data: new Uint8Array(png), contentType: "image/png" }),
   );
   for (const [delegate, key, value] of [
     [prisma.idea, "update", update],
+    [prisma.idea, "create", create],
     [prisma.ideaEntryImage, "findFirst", findFirst],
   ] as const) {
     const original = Reflect.get(delegate, key);
     Object.defineProperty(delegate, key, { value, configurable: true, writable: true });
     t.after(() => Object.defineProperty(delegate, key, { value: original, configurable: true, writable: true }));
   }
-  return { update, findFirst, revalidate };
+  return { update, create, findFirst, revalidate };
 }
+
+test("new untitled bolts save an image-only first entry atomically", async (t) => {
+  const { create, update } = await setup(t);
+  await assert.rejects(() => createIdea({}, entryData(" ", 2)), /NEXT_REDIRECT/);
+  const args = create.mock.calls[0].arguments[0];
+  assert.equal(args.data.title, "");
+  assert.deepEqual(args.data.entries, { create: {
+    content: "",
+    isTodo: false,
+    images: { create: [0, 1].map((position) => ({ contentType: "image/png", position, data: new Uint8Array(png) })) },
+  } });
+  assert.equal(update.mock.callCount(), 0);
+});
+
+test("invalid first-entry images and database failures never report a saved bolt", async (t) => {
+  const { create, revalidate } = await setup(t);
+  const invalid = entryData("note", 0);
+  invalid.append("images", new File(["not a PNG"], "fake.png", { type: "image/png" }));
+  assert.match((await createIdea({}, invalid)).error!, /could not be read/);
+  assert.equal(create.mock.callCount(), 0);
+  create.mock.mockImplementation(async () => { throw new Error("test database unavailable"); });
+  const log = t.mock.method(console, "error", () => {});
+  assert.match((await createIdea({}, entryData())).error!, /text and images are still here/);
+  assert.equal(log.mock.callCount(), 1);
+  assert.equal(revalidate.mock.callCount(), 0);
+});
+
+test("deleted bolts cannot have a title added", async (t) => {
+  const { update, revalidate } = await setup(t);
+  update.mock.mockImplementation(async () => {
+    throw new Prisma.PrismaClientKnownRequestError("test record missing", { code: "P2025", clientVersion: "test" });
+  });
+  t.mock.method(console, "error", () => {});
+  const data = new FormData();
+  data.set("title", "A title");
+  assert.match((await updateIdeaTitle(ideaId, {}, data)).error!, /no longer exists/);
+  assert.equal(revalidate.mock.callCount(), 0);
+});
 
 test("entry image bounds accept exactly four images and 4 MB, rejecting larger totals and unsafe types", () => {
   assert.equal(validateEntryImages([]), undefined);
@@ -112,6 +152,7 @@ test("image-only contributions save attachments atomically, in clipboard order, 
   assert.equal("snoozeCount" in args.data, false);
   assert.deepEqual(args.data.entries, { create: {
     content: "",
+    isTodo: false,
     images: { create: [0, 1].map((position) => ({ contentType: "image/png", position, data: new Uint8Array(png) })) },
   } });
   assert.deepEqual(revalidate.mock.calls.map((call) => call.arguments[0]), [
@@ -122,7 +163,7 @@ test("image-only contributions save attachments atomically, in clipboard order, 
 test("plain-text entries remain valid without attachments", async (t) => {
   const { update } = await setup(t);
   assert.deepEqual(await addEntry(ideaId, {}, entryData("  A note  ", 0)), { saved: true });
-  assert.deepEqual(update.mock.calls[0].arguments[0].data.entries, { create: { content: "A note" } });
+  assert.deepEqual(update.mock.calls[0].arguments[0].data.entries, { create: { content: "A note", isTodo: false } });
 });
 
 test("invalid image submissions never write entries or dismissal state", async (t) => {
@@ -200,7 +241,7 @@ test("missing and invalid images return 404, and database errors return an expli
 });
 
 test("detail and feed display authenticated inline images without nested links or empty text", () => {
-  const entries = [{ id: "entry", content: "", createdAt: record.createdAt, images: [{ id: imageId }] }];
+  const entries = [{ id: "entry", content: "", isTodo: false, completedAt: null, createdAt: record.createdAt, images: [{ id: imageId }] }];
   const detail = renderToStaticMarkup(createElement(IdeaDetail, { idea: { ...record, entries } }));
   const feed = renderToStaticMarkup(createElement(IdeaList, {
     page: { ideas: [{ ...record, entries, _count: { entries: 1 } }], nextCursor: null },

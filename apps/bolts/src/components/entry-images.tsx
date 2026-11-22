@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { entryImagePath } from "../lib/entry-images";
 
-function EntryImage({ id, index }: { id: string; index: number }) {
+export function EntryImage({ id, index }: { id: string; index: number }) {
   const [failed, setFailed] = useState(false);
   if (failed) {
     return (
