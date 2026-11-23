@@ -9,7 +9,7 @@ import { IdeaLinks, IdeaViews } from "../apps/bolts/src/components/idea-views";
 import type { IdeaDetail } from "../apps/bolts/src/lib/ideas";
 
 function entry(id: string, content: string, date = "2026-11-22T10:00:00Z"): IdeaDetail["entries"][number] {
-  return { id, content, isTodo: false, completedAt: null, createdAt: new Date(date), images: [] };
+  return { id, content, linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: new Date(date), images: [] };
 }
 
 test("link collection and inline entry text use identical URL parsing and punctuation rules", () => {

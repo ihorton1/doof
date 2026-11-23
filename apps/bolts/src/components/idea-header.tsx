@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useActionState, useEffect, useRef, useState } from "react";
+import React, { useActionState, useRef, useState } from "react";
 import { updateIdeaTitle } from "../app/actions";
 import { ideaTitleSchema, type SaveState } from "../lib/ideas";
+import { useMenuDismiss } from "./use-menu-dismiss";
 
 export function IdeaHeader({ ideaId, title = "", onTitleChange }: {
   ideaId?: string;
@@ -12,6 +13,7 @@ export function IdeaHeader({ ideaId, title = "", onTitleChange }: {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
   const menuRef = useRef<HTMLDetailsElement>(null);
+  useMenuDismiss(menuRef);
   const [state, action, pending] = useActionState<SaveState, FormData>(async (previous, data) => {
     const input = ideaTitleSchema.safeParse(data.get("title"));
     if (!input.success) return { error: input.error.issues[0].message };
@@ -22,26 +24,6 @@ export function IdeaHeader({ ideaId, title = "", onTitleChange }: {
     }
     return result;
   }, {});
-
-  useEffect(() => {
-    function dismiss(event: PointerEvent) {
-      const menu = menuRef.current;
-      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
-    }
-    function escape(event: KeyboardEvent) {
-      const menu = menuRef.current;
-      if (event.key === "Escape" && menu?.open) {
-        menu.open = false;
-        menu.querySelector("summary")?.focus();
-      }
-    }
-    document.addEventListener("pointerdown", dismiss);
-    document.addEventListener("keydown", escape);
-    return () => {
-      document.removeEventListener("pointerdown", dismiss);
-      document.removeEventListener("keydown", escape);
-    };
-  }, []);
 
   return (
     <header className="detail-header">

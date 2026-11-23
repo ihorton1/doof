@@ -11,6 +11,34 @@ import { londonDayAfter, snoozeDays, SNOOZE_DAYS } from "../lib/idea-schedule";
 import { getIdeaPage, ideaPageRequestSchema, type IdeaPageResult } from "../lib/idea-feed";
 import { imageContentType, removedEntryImageIdsSchema, validateEntryImages } from "../lib/entry-images";
 import { entryIdentitySchema, parseEntryContent, todoCompletionSchema } from "../lib/entry-todos";
+import { moveEntryToBolt } from "../lib/entry-breakout";
+
+export async function breakOutEntry(
+  ideaId: string,
+  entryId: string,
+  _previous: SaveState,
+  formData: FormData,
+): Promise<SaveState> {
+  await requireSession();
+  const identity = entryIdentitySchema.safeParse({ ideaId, entryId });
+  if (!identity.success) return { error: identity.error.issues[0].message };
+  const title = ideaTitleSchema.safeParse(formData.get("title") ?? "");
+  if (!title.success) return { error: title.error.issues[0].message };
+  let newIdeaId: string;
+  try {
+    newIdeaId = await moveEntryToBolt(getPrisma(), identity.data.ideaId, identity.data.entryId, title.data);
+  } catch (error) {
+    console.error("Bolts: could not break out entry", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return { error: "This entry was moved, is already a bolt link, or no longer exists. Refresh the page and try again." };
+    }
+    return { error: "Your entry could not be made into a bolt. Nothing was moved; please try again." };
+  }
+  revalidatePath(appPath());
+  revalidatePath(appPath("/search"));
+  revalidatePath(appPath(`/ideas/${identity.data.ideaId}`));
+  return redirectAfterAction(`/ideas/${newIdeaId}/`);
+}
 
 export async function createIdea(_previous: SaveState, formData: FormData): Promise<SaveState> {
   await requireSession();

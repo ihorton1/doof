@@ -27,7 +27,7 @@ const idea = {
   dueAt: new Date("2026-11-23T00:00:00Z"), snoozeCount: 0, pendingDismissal: true,
 };
 const entry: IdeaDetailData["entries"][number] = {
-  id: entryId, content: "Read https://example.com/article", isTodo: true,
+  id: entryId, content: "Read https://example.com/article", linkedIdeaId: null, isTodo: true,
   completedAt: null, createdAt: idea.createdAt, images: [],
 };
 
@@ -275,7 +275,7 @@ test("To-dos collects all tasks including completed tasks, omits notes and offer
   assert.doesNotMatch(DomUtils.textContent(document), /A note/);
   assert.match(DomUtils.textContent(items[0]), /Read https:\/\/example.com/);
   assert.match(DomUtils.textContent(items[1]), /Finished task/);
-  assert.equal(DomUtils.findAll((node) => node.attribs["aria-label"] === "Edit entry", document.children).length, 2);
+  assert.equal(DomUtils.findAll((node) => node.attribs["aria-label"] === "Entry options", document.children).length, 2);
   const empty = renderToStaticMarkup(createElement(IdeaTodos, { ideaId, entries: [{ ...entry, isTodo: false }] }));
   assert.match(empty, /No to-dos yet/);
 });
@@ -300,7 +300,7 @@ test("to-do checkboxes reflect completion, notes stay unchanged and task links r
     assert.ok(heading);
     assert.equal(DomUtils.findAll((node) => node.name === "input" && node.attribs.type === "checkbox", heading.children).length, 0);
     assert.ok(DomUtils.findOne((node) => node.name === "time", heading.children));
-    assert.equal(DomUtils.findAll((node) => node.attribs["aria-label"] === "Edit entry", entriesPanel.children).length, 2);
+    assert.equal(DomUtils.findAll((node) => node.attribs["aria-label"] === "Entry options", entriesPanel.children).length, 2);
     for (const form of DomUtils.findAll((node) => node.name === "form", document.children)) {
       assert.equal(DomUtils.findAll((node) => node.name === "input" && node.attribs.type === "checkbox", form.children).length, 0,
         "Checkbox toggles must not be reset by form submission");

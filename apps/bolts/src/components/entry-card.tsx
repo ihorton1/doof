@@ -1,14 +1,34 @@
 "use client";
 
 import React, { useActionState, useEffect, useId, useRef, useState } from "react";
-import { updateEntry } from "../app/actions";
+import { breakOutEntry, updateEntry } from "../app/actions";
 import type { IdeaDetail, SaveState } from "../lib/ideas";
 import { parseEntryContent } from "../lib/entry-todos";
 import { EntryText } from "./entry-text";
 import { EntryImage, EntryImages } from "./entry-images";
 import { TodoCheckbox } from "./todo-checkbox";
+import { entryBoltTitle } from "../lib/entry-breakout";
+import { useMenuDismiss } from "./use-menu-dismiss";
 
 type Entry = IdeaDetail["entries"][number];
+
+function EntryBreakout({ ideaId, entry, onClose }: { ideaId: string; entry: Entry; onClose: () => void }) {
+  const id = useId();
+  const [state, action, pending] = useActionState(breakOutEntry.bind(null, ideaId, entry.id), {});
+  return (
+    <form action={action} className="idea-form entry-edit-form">
+      <label htmlFor={`${id}-title`}>New bolt title (optional)</label>
+      <input id={`${id}-title`} name="title" defaultValue={entryBoltTitle(entry.content)} maxLength={200}
+        placeholder="Untitled bolt" autoFocus disabled={pending}
+        aria-invalid={Boolean(state.error)} aria-describedby={state.error ? `${id}-error` : undefined} />
+      {state.error && <p id={`${id}-error`} role="alert" className="form-error">{state.error}</p>}
+      <div className="form-footer entry-actions">
+        <button type="button" className="button button-secondary" disabled={pending} onClick={onClose}>Cancel</button>
+        <button className="button button-primary" disabled={pending}>{pending ? "Creating..." : "Create bolt"}</button>
+      </div>
+    </form>
+  );
+}
 
 function EntryEditor({ ideaId, entry, onClose }: { ideaId: string; entry: Entry; onClose: () => void }) {
   const [content, setContent] = useState(`${entry.isTodo ? "[]" : ""}${entry.content}`);
@@ -54,8 +74,11 @@ function EntryEditor({ ideaId, entry, onClose }: { ideaId: string; entry: Entry;
 }
 
 export function EntryCard({ ideaId, entry }: { ideaId: string; entry: Entry }) {
-  const [editing, setEditing] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [mode, setMode] = useState<"edit" | "breakout" | null>(null);
+  const editing = mode !== null;
+  const buttonRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  useMenuDismiss(menuRef);
   const wasEditing = useRef(false);
 
   useEffect(() => {
@@ -68,17 +91,27 @@ export function EntryCard({ ideaId, entry }: { ideaId: string; entry: Entry }) {
       <div className={`entry-heading${!editing && entry.isTodo ? " todo-entry-heading" : ""}`}>
         <time dateTime={entry.createdAt.toISOString()}>{entry.createdAt.toISOString().slice(0, 10)}</time>
       </div>
-      {editing ? (
-        <EntryEditor ideaId={ideaId} entry={entry} onClose={() => setEditing(false)} />
+      {mode === "edit" ? (
+        <EntryEditor ideaId={ideaId} entry={entry} onClose={() => setMode(null)} />
+      ) : mode === "breakout" ? (
+        <EntryBreakout ideaId={ideaId} entry={entry} onClose={() => setMode(null)} />
       ) : (
         <>
-          <button type="button" className="entry-edit-button" aria-label="Edit entry" ref={buttonRef} onClick={() => setEditing(true)}>
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-2 2 5 5" />
-            </svg>
-          </button>
+          <details className="user-menu entry-menu" ref={menuRef}>
+            <summary aria-label="Entry options" ref={buttonRef}>
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" />
+              </svg>
+            </summary>
+            <div className="user-menu-panel">
+              <button type="button" className="user-menu-item" onClick={() => setMode("edit")}>Edit entry</button>
+              {!entry.linkedIdeaId && <button type="button" className="user-menu-item" onClick={() => setMode("breakout")}>
+                Break out
+              </button>}
+            </div>
+          </details>
           {entry.isTodo && <TodoCheckbox ideaId={ideaId} entry={entry} />}
-          {entry.content && <p><EntryText text={entry.content} /></p>}
+          {(entry.content || entry.linkedIdeaId) && <p><EntryText text={entry.content} linkedIdeaId={entry.linkedIdeaId} /></p>}
         </>
       )}
       {!editing && <EntryImages images={entry.images} />}

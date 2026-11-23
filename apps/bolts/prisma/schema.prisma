@@ -20,22 +20,26 @@ model Idea {
   dueAt            DateTime    @default(now())
   snoozeCount      Int         @default(0)
   pendingDismissal Boolean     @default(false)
-  entries          IdeaEntry[]
+  entries          IdeaEntry[] @relation("Entries")
+  linkedFrom       IdeaEntry[] @relation("LinkedBolt")
 
   @@index([deletedAt, archivedAt, dueAt, createdAt, id])
 }
 
 model IdeaEntry {
-  id          String           @id @default(cuid())
-  ideaId      String
-  content     String           @db.Text
-  isTodo      Boolean          @default(false)
-  completedAt DateTime?
-  createdAt   DateTime         @default(now())
-  idea        Idea             @relation(fields: [ideaId], references: [id], onDelete: Cascade)
-  images      IdeaEntryImage[]
+  id           String           @id @default(cuid())
+  ideaId       String
+  content      String           @db.Text
+  isTodo       Boolean          @default(false)
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  idea         Idea             @relation("Entries", fields: [ideaId], references: [id], onDelete: Cascade)
+  linkedIdeaId String?
+  linkedIdea   Idea?            @relation("LinkedBolt", fields: [linkedIdeaId], references: [id], onDelete: SetNull)
+  images       IdeaEntryImage[]
 
   @@index([ideaId, createdAt])
+  @@index([linkedIdeaId])
 }
 
 model IdeaEntryImage {

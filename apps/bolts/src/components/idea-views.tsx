@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useId, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import type { IdeaDetail } from "../lib/ideas";
 import { extractEntryLinks } from "../lib/entry-links";
 import { EntryCard } from "./entry-card";
 
 export function IdeaLinks({ entries }: { entries: IdeaDetail["entries"] }) {
-  const links = entries.flatMap((entry) => extractEntryLinks(entry.content).map((link) => ({
-    ...link, entryId: entry.id, createdAt: entry.createdAt,
+  const links = entries.flatMap((entry) => entry.linkedIdeaId ? [{
+    index: 0, label: entry.content, href: `/ideas/${entry.linkedIdeaId}`,
+    entryId: entry.id, createdAt: entry.createdAt, isBolt: true,
+  }] : extractEntryLinks(entry.content).map((link) => ({
+    ...link, entryId: entry.id, createdAt: entry.createdAt, isBolt: false,
   })));
 
   if (links.length === 0) {
@@ -23,13 +27,16 @@ export function IdeaLinks({ entries }: { entries: IdeaDetail["entries"] }) {
     <ul className="bolt-link-list" aria-label="Links from all entries">
       {links.map((link) => (
         <li key={`${link.entryId}-${link.index}`} className="bolt-link-card">
-          <a href={link.href} target="_blank" rel="noopener noreferrer">
+          {link.isBolt ? <Link href={link.href}>
+            <span className="bolt-link-host"><span aria-hidden="true">&#9889;</span> Bolt</span>
+            <span className="bolt-link-url">{link.label}</span>
+          </Link> : <a href={link.href} target="_blank" rel="noopener noreferrer">
             <span className="bolt-link-host">{new URL(link.href).hostname}</span>
             <span className="bolt-link-url">{link.label}</span>
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h6v6m0-6L10 14M10 3H3v18h18v-7" />
             </svg>
-          </a>
+          </a>}
           <time dateTime={link.createdAt.toISOString()}>{link.createdAt.toISOString().slice(0, 10)}</time>
         </li>
       ))}

@@ -6,10 +6,137 @@ import { getPrisma } from "../apps/bolts/src/lib/prisma";
 import { activeIdeaWhere, ideaFeedSelect } from "../apps/bolts/src/lib/ideas";
 import { getIdeaPage, type IdeaPageRequest } from "../apps/bolts/src/lib/idea-feed";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { parseEntryContent } from "../apps/bolts/src/lib/entry-todos";
+import { moveEntryToBolt } from "../apps/bolts/src/lib/entry-breakout";
 
 config({ path: path.resolve(import.meta.dirname, "../apps/bolts/.env"), quiet: true });
 after(() => getPrisma().$disconnect());
+
+test("breakout content migration restores automatic labels but preserves edited and ambiguous links", async () => {
+  const prisma = getPrisma();
+  const databases = await prisma.$queryRaw<{ name: string }[]>`SELECT current_database() AS name`;
+  assert.equal(databases[0].name, "bolts_dev", "Refusing to write test data outside bolts_dev");
+  const sql = await readFile(path.join(import.meta.dirname, "..", "apps", "bolts", "prisma", "migrations", "20261123193000_restore_breakout_content", "migration.sql"), "utf8");
+  const rollback = new Error("Roll back migration test fixtures");
+  await assert.rejects(prisma.$transaction(async (tx) => {
+    const date = new Date("2026-11-01T12:00:00Z");
+    const title = `Restore content ${randomUUID()}`;
+    const target = await tx.idea.create({
+      data: { title, entries: { create: { content: "Original text\nwith details", createdAt: date } } },
+    });
+    const ambiguous = await tx.idea.create({
+      data: { title, entries: { create: [
+        { content: "First candidate", createdAt: date }, { content: "Second candidate", createdAt: date },
+      ] } },
+    });
+    const source = await tx.idea.create({
+      data: { title, entries: { create: [
+        { content: title, createdAt: date, linkedIdeaId: target.id },
+        { content: "Untitled bolt", createdAt: date, linkedIdeaId: target.id },
+        { content: "My edited label", createdAt: date, linkedIdeaId: target.id },
+        { content: title, createdAt: date, linkedIdeaId: ambiguous.id },
+      ] } },
+      include: { entries: true },
+    });
+    await tx.$executeRawUnsafe(sql);
+    const rows = await tx.ideaEntry.findMany({ where: { ideaId: source.id } });
+    for (const original of source.entries) {
+      const row = rows.find((entry) => entry.id === original.id)!;
+      const shouldRestore = original.linkedIdeaId === target.id && original.content !== "My edited label";
+      assert.equal(row.content, shouldRestore ? "Original text\nwith details" : original.content);
+    }
+    throw rollback;
+  }), (error) => error === rollback);
+});
+
+test("entry breakouts preserve data, leave links, reject duplicates and roll back invalid moves", async () => {
+  const prisma = getPrisma();
+  const databases = await prisma.$queryRaw<{ name: string }[]>`SELECT current_database() AS name`;
+  assert.equal(databases[0].name, "bolts_dev", "Refusing to write test data outside bolts_dev");
+  const ids: string[] = [];
+  const title = `Breakout integration ${randomUUID()}`;
+  try {
+    const source = await prisma.idea.create({
+      data: {
+        title, dueAt: new Date("2100-01-01T00:00:00Z"), pendingDismissal: false,
+        entries: { create: [
+          {
+            content: "Read this\nhttps://example.com", isTodo: true,
+            completedAt: new Date("2026-11-22T12:00:00Z"), createdAt: new Date("2026-11-01T12:00:00Z"),
+            images: { create: [
+              { position: 0, contentType: "image/png", data: new Uint8Array([1, 2, 3]) },
+              { position: 1, contentType: "image/jpeg", data: new Uint8Array([4, 5, 6]) },
+            ] },
+          },
+          { content: "Unchanged sibling", createdAt: new Date("2026-11-02T12:00:00Z") },
+        ] },
+      },
+      include: { entries: { orderBy: { createdAt: "asc" }, include: { images: { orderBy: { position: "asc" } } } } },
+    });
+    ids.push(source.id);
+    const original = source.entries[0];
+    const newId = await moveEntryToBolt(prisma, source.id, original.id, title);
+    ids.push(newId);
+    const moved = await prisma.ideaEntry.findUniqueOrThrow({
+      where: { id: original.id }, include: { images: { orderBy: { position: "asc" } } },
+    });
+    assert.deepEqual(moved, { ...original, ideaId: newId });
+    const parent = await prisma.idea.findUniqueOrThrow({ where: { id: source.id }, include: { entries: { orderBy: { createdAt: "asc" } } } });
+    assert.equal(parent.dueAt.toISOString(), source.dueAt.toISOString());
+    assert.equal(parent.updatedAt.toISOString(), source.updatedAt.toISOString());
+    assert.equal(parent.pendingDismissal, false);
+    assert.equal(parent.entries.length, 2);
+    const link = parent.entries[0];
+    assert.equal(link.linkedIdeaId, newId);
+    assert.equal(link.content, original.content);
+    assert.equal(link.createdAt.toISOString(), original.createdAt.toISOString());
+    assert.equal(link.isTodo, false);
+    assert.equal(link.completedAt, null);
+    assert.equal(parent.entries[1].content, "Unchanged sibling");
+    const bolt = await prisma.idea.findUniqueOrThrow({ where: { id: newId } });
+    assert.equal(bolt.title, title);
+    assert.equal(bolt.pendingDismissal, true);
+    assert.equal(bolt.archivedAt, null);
+    assert.ok(bolt.dueAt > bolt.createdAt);
+
+    for (const id of [original.id, link.id, "cmivnlm9w0000356l5ih14d7z"]) {
+      await assert.rejects(moveEntryToBolt(prisma, source.id, id, title), { code: "P2025" });
+      assert.equal(await prisma.idea.count({ where: { title } }), 2, "Failed moves must roll back the newly created bolt");
+    }
+    await prisma.idea.update({ where: { id: source.id }, data: { deletedAt: new Date() } });
+    await assert.rejects(moveEntryToBolt(prisma, source.id, parent.entries[1].id, title), { code: "P2025" });
+    assert.equal(await prisma.idea.count({ where: { title } }), 2);
+    await prisma.idea.delete({ where: { id: newId } });
+    assert.equal((await prisma.ideaEntry.findUniqueOrThrow({ where: { id: link.id } })).linkedIdeaId, null);
+  } finally {
+    await prisma.idea.deleteMany({ where: { id: { in: ids } } });
+  }
+});
+
+test("concurrent breakouts create exactly one new bolt and one source link", async () => {
+  const prisma = getPrisma();
+  const databases = await prisma.$queryRaw<{ name: string }[]>`SELECT current_database() AS name`;
+  assert.equal(databases[0].name, "bolts_dev", "Refusing to write test data outside bolts_dev");
+  const title = `Concurrent breakout ${randomUUID()}`;
+  const source = await prisma.idea.create({
+    data: { title, entries: { create: { content: "One entry" } } }, include: { entries: true },
+  });
+  try {
+    const results = await Promise.allSettled([
+      moveEntryToBolt(prisma, source.id, source.entries[0].id, title),
+      moveEntryToBolt(prisma, source.id, source.entries[0].id, title),
+    ]);
+    assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
+    assert.equal(results.filter((result) => result.status === "rejected").length, 1);
+    assert.equal(await prisma.idea.count({ where: { title } }), 2);
+    const links = await prisma.ideaEntry.findMany({ where: { ideaId: source.id } });
+    assert.equal(links.length, 1);
+    assert.ok(links[0].linkedIdeaId);
+  } finally {
+    await prisma.idea.deleteMany({ where: { title } });
+  }
+});
 
 test("Bolts persists ideas and dated entries only in its isolated development database", async () => {
   const prisma = getPrisma();

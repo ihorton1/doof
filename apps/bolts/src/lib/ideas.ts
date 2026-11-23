@@ -45,6 +45,7 @@ export const ideaFeedSelect = {
     take: 1,
     select: {
       content: true,
+      linkedIdeaId: true,
       isTodo: true,
       completedAt: true,
       createdAt: true,
@@ -60,5 +61,5 @@ export type IdeaDetail = {
   title: string;
   pendingDismissal: boolean;
   archivedAt: Date | null;
-  entries: { id: string; content: string; isTodo: boolean; completedAt: Date | null; createdAt: Date; images: { id: string }[] }[];
+  entries: { id: string; content: string; linkedIdeaId: string | null; isTodo: boolean; completedAt: Date | null; createdAt: Date; images: { id: string }[] }[];
 };

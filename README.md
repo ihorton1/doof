@@ -63,13 +63,21 @@ and completed text is struck through. Completion is saved without changing the
 bolt's schedule or **Done for now** state. Entries without the prefix remain
 notes, including existing entries. To-dos can contain multiple lines, links and
 images; their links still appear in the **Links** tab.
-Use an entry's pencil button to edit its text. Attached images appear as
+Use an entry's three-dot menu and **Edit entry** to edit its text. Attached images appear as
 thumbnails with an **x** in the top-right to stage removal. **Save entry** applies
 the text edits and image removals together, keeping the original date and any
 remaining images; **Cancel** leaves everything unchanged. An entry must retain
 some text or at least one image. Adding or removing the
 leading `[]` changes it between a to-do and a note. Editing a completed to-do
 keeps it completed unless it is converted to a note.
+The same menu offers **Break out**. Confirm, change or clear the optional
+suggested title, then choose **Create bolt**. The entry moves into a new bolt, retaining its
+original date, text, images and to-do completion state. Its old position keeps
+the original text and date, marked with a lightning bolt without an underline.
+Double-tap the text (double-click with a mouse) to open the new bolt; keyboard
+users can focus it and press Enter. It also appears in **Links** and feed
+previews. The original bolt's schedule is unchanged; the new bolt follows the
+usual new-bolt schedule. Bolt links cannot be broken out again.
 Paste images into the entry field to attach them, with or without a text note.
 The trash icon beside each preview removes it before **Add entry**; failed saves retain text and images
 for retrying. Each entry accepts up to four PNG, JPEG, GIF or WebP images with a
@@ -84,10 +92,11 @@ opening in a new tab while leaving Bolts open. Feed cards still open the idea
 when clicked outside an external link. Surrounding punctuation is not linked.
 Each bolt has **Entries**, **To-dos** and **Links** tabs. **To-dos** collects all
 to-do entries, including completed ones, in entry order. Tasks can be checked or
-edited there as well as in **Entries**. **Links** lists web addresses from
-all saved entries in entry order, with the domain, URL and entry date. Repeated
+edited there as well as in **Entries**. **Links** lists web addresses and breakout
+bolt links from all saved entries in entry order, with their labels and entry dates. Repeated
 links remain listed where they were shared; no external previews are fetched.
-Links open in a new tab. Switching views preserves unsaved entry drafts.
+Web links open in a new tab; bolt links open in the same tab.
+Switching views preserves unsaved entry drafts.
 Opening a bolt does not change its schedule. After adding an entry, **Done for
 now**, beside **Add entry**, dismisses it until midnight the next calendar day in **Europe/London** and
 resets its snooze sequence. Adding an entry alone does not dismiss the bolt.
