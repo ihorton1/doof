@@ -6,7 +6,10 @@ import { extractRecipes, RecipeImportError } from "@/lib/recipe-import";
 
 export const runtime = "nodejs";
 
-const inputSchema = z.object({ url: z.string().trim().min(1).max(500) });
+const inputSchema = z.object({
+  url: z.string().trim().min(1).max(500),
+  mode: z.enum(["import", "peek"]).default("import"),
+});
 
 export async function POST(request: NextRequest) {
   if (!isValidSessionCookie(request.cookies.get(SESSION_COOKIE_NAME)?.value)) {
@@ -26,7 +29,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const page = await fetchRecipePage(input.data.url);
-    return NextResponse.json(extractRecipes(page.html, page.url), {
+    const result = extractRecipes(page.html, page.url, { preview: input.data.mode === "peek" });
+    return NextResponse.json({
+      ...result,
+      ...(input.data.mode === "peek" ? { sourceUrl: page.url } : {}),
+    }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {

@@ -32,10 +32,12 @@ export function DishForm({
   action,
   initial,
   suggestions,
+  skipInitialUrlPreview = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: Initial;
   suggestions?: { names: string[]; units: string[]; tags: string[] };
+  skipInitialUrlPreview?: boolean;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -154,7 +156,7 @@ export function DishForm({
               }
             }}
             onBlur={() => {
-              if (!autoPreviewUrl && sourceUrl.trim()) previewUrl(sourceUrl);
+              if (!autoPreviewUrl && sourceUrl.trim() && (!skipInitialUrlPreview || sourceUrl.trim() !== initial?.sourceUrl)) previewUrl(sourceUrl);
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dishImagePath, getDishIdsWithImages } from "@/lib/dish-images";
 import { Plus } from "lucide-react";
 import { DishList, type DishListItem } from "./dish-list";
+import { RecipePeek } from "./recipe-peek";
 
 export const dynamic = "force-dynamic";
 
@@ -135,13 +136,16 @@ export default async function DishesPage({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dishes</h1>
-        <Link
-          href="/dishes/new"
-          className="inline-flex items-center gap-1 h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-        >
-          <Plus className="size-4" />
-          New
-        </Link>
+        <div className="flex items-center gap-2">
+          <RecipePeek />
+          <Link
+            href="/dishes/new"
+            className="inline-flex items-center gap-1 h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
+          >
+            <Plus className="size-4" />
+            New
+          </Link>
+        </div>
       </div>
 
       {allTags.length > 0 && (

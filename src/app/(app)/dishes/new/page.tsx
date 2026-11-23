@@ -1,11 +1,13 @@
-import { DishForm } from "../dish-form";
-import { createDish } from "../actions";
+import { NewDishForm } from "./new-dish-form";
 import { getIngredientSuggestions } from "@/lib/ingredient-suggestions";
 import { getTagSuggestions } from "@/lib/tag-suggestions";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewDishPage() {
+export default async function NewDishPage({ searchParams }: {
+  searchParams: Promise<{ peek?: string }>;
+}) {
+  const { peek } = await searchParams;
   const [ingredient, tags] = await Promise.all([
     getIngredientSuggestions(),
     getTagSuggestions(),
@@ -14,7 +16,7 @@ export default async function NewDishPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">New dish</h1>
-      <DishForm action={createDish} suggestions={suggestions} />
+      <NewDishForm key={peek ?? "manual"} peekId={peek} suggestions={suggestions} />
     </div>
   );
 }
