@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import type { RecipeImportResult } from "@/lib/recipe-import";
+import type { ImportedRecipe, RecipeImportResult } from "@/lib/recipe-import";
 import {
   convertedIngredients,
   createIngredientDraft,
@@ -27,21 +27,27 @@ export function IngredientImporter({
   sourceUrl,
   autoPreview,
   currentImageUrl,
+  initialRecipe,
   onReplace,
   onUseImage,
 }: {
   sourceUrl: string;
   autoPreview: boolean;
   currentImageUrl: string | null;
+  initialRecipe?: ImportedRecipe;
   onReplace: (ingredients: IngredientFields[], details?: { name: string; notes?: string }) => void;
   onUseImage: (imageUrl: string) => void;
 }) {
   const [busy, setBusy] = useState(autoPreview);
-  const [result, setResult] = useState<RecipeImportResult | null>(null);
+  const [result, setResult] = useState<RecipeImportResult | null>(() =>
+    initialRecipe ? { recipes: [initialRecipe], warnings: [] } : null,
+  );
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<IngredientDraft[][]>([]);
+  const [drafts, setDrafts] = useState<IngredientDraft[][]>(() =>
+    initialRecipe ? [initialRecipe.ingredients.map(createIngredientDraft)] : [],
+  );
   const [aiOpen, setAiOpen] = useState(false);
   const [previewSource, setPreviewSource] = useState<"url" | "ai">("url");
   const [previewVersion, setPreviewVersion] = useState(0);
@@ -175,9 +181,6 @@ export function IngredientImporter({
             </div>
           )}
           <div className="space-y-3">
-            <p className="text-xs text-slate-500">
-              Review the suggested fields, or select words to correct them. Use the trash can to omit a line; Undo restores it.
-            </p>
             {currentDrafts.map((draft, index) => draft.dismissed ? (
               <div key={`${previewVersion}-${selected}-${index}`} className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-slate-300 p-3 text-sm dark:border-slate-700">
                 <p role="status" className="min-w-0 break-words">Removed: {draft.original}</p>

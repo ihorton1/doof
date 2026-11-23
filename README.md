@@ -451,6 +451,36 @@ for details such as "finely chopped" or "room temperature". These notes are
 shown beside the ingredient on the dish page, preserved when editing, and
 excluded from the shopping list.
 
+### Peeking at a recipe (prototype)
+
+On **Dishes**, choose **Peek**, paste a recipe URL and press **Preview**. The
+read-only reader shows the recipe title, source, ingredients and numbered method
+steps. It uses a tall bottom sheet on mobile and a centred panel on desktop,
+with **Add to my dishes** fixed below the scrollable content. Pages containing
+several recipes offer a selector. Closing the reader saves nothing.
+
+**Add to my dishes** opens the full New dish form with the selected recipe's
+name, source URL, image (when available), prepared ingredient fields and method
+(in Notes). The same ingredient word-selection editor used for URL imports opens
+with the original sentences, letting you assign words to Quantity, Unit,
+Ingredient and Notes, remove/undo lines, then apply your changes with **Use recipe**
+(or **Replace ingredients** for an untitled recipe). The carried-over image is
+already selected and can be removed or replaced using the existing image controls.
+It does not fetch the recipe again. Review the suggested ingredient splits before saving;
+ambiguous text is preserved rather than discarded. The draft stays only in that
+browser tab's session storage, survives refresh, and is not saved to the database
+until **Save dish**. Images stay out of the lightweight reader but carry into the add form.
+Unavailable or blocked browser storage produces an explicit error. An expired
+or invalid draft link offers a return to Dishes or a manual add.
+
+Preview uses the existing signed-in, public-URL-only fetch path. Method extraction
+supports JSON-LD text, arrays, `HowToStep` and nested `HowToSection` values.
+Missing ingredients or methods are labelled explicitly with an **Open original**
+link; steps are never invented. Unsupported method details produce a warning.
+Methods over 200 steps or 19,000 formatted characters (including numbering and
+section headings) are omitted with a warning rather than
+silently truncated. Normal URL ingredient import below remains unchanged.
+
 ### Importing ingredients from a recipe URL
 
 On either **New dish** or **Edit dish**, paste the recipe's **Source URL** to

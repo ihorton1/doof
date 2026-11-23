@@ -8,6 +8,7 @@ import { TagPicker } from "./tag-picker";
 import { IngredientImporter } from "./ingredient-importer";
 import { DishRatingOptions } from "@/components/dish-rating-control";
 import type { DishRating } from "@/lib/dish-ratings";
+import type { ImportedRecipe } from "@/lib/recipe-import";
 
 type Ingredient = {
   name: string;
@@ -32,10 +33,14 @@ export function DishForm({
   action,
   initial,
   suggestions,
+  skipInitialUrlPreview = false,
+  initialRecipe,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: Initial;
   suggestions?: { names: string[]; units: string[]; tags: string[] };
+  skipInitialUrlPreview?: boolean;
+  initialRecipe?: ImportedRecipe;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -90,6 +95,7 @@ export function DishForm({
         sourceUrl={sourceUrl}
         autoPreview={autoPreviewUrl}
         currentImageUrl={imageUrl}
+        initialRecipe={urlImportVersion === 0 && sourceUrl === initial?.sourceUrl ? initialRecipe : undefined}
         onUseImage={setImageUrl}
         onReplace={(rows, details) => {
           setIngredients(rows.map(({ name, quantity, unit, notes }) => ({ name, quantity, unit, notes: notes ?? "" })));
@@ -154,7 +160,7 @@ export function DishForm({
               }
             }}
             onBlur={() => {
-              if (!autoPreviewUrl && sourceUrl.trim()) previewUrl(sourceUrl);
+              if (!autoPreviewUrl && sourceUrl.trim() && (!skipInitialUrlPreview || sourceUrl.trim() !== initial?.sourceUrl)) previewUrl(sourceUrl);
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
@@ -215,7 +221,6 @@ export function DishForm({
                 maxLength={200}
                 placeholder="Note (optional)"
                 aria-label={`Notes for ingredient ${idx + 1}`}
-                aria-describedby="ingredient-notes-help"
                 className={`${inputCls} min-w-0 col-start-2 row-start-2 sm:col-start-4 sm:row-start-1`}
               />
               <button
@@ -236,9 +241,6 @@ export function DishForm({
         >
           <Plus className="size-4" /> Add ingredient
         </button>
-        <p id="ingredient-notes-help" className="mt-2 text-xs text-slate-500">
-          Ingredient notes (e.g. finely chopped, room temperature) appear on the dish, not on your shopping list.
-        </p>
       </div>
 
       <div className="space-y-2">
