@@ -241,7 +241,7 @@ test("missing and invalid images return 404, and database errors return an expli
 });
 
 test("detail and feed display authenticated inline images without nested links or empty text", () => {
-  const entries = [{ id: "entry", content: "", isTodo: false, completedAt: null, createdAt: record.createdAt, images: [{ id: imageId }] }];
+  const entries = [{ id: "entry", content: "", linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: record.createdAt, images: [{ id: imageId }] }];
   const detail = renderToStaticMarkup(createElement(IdeaDetail, { idea: { ...record, entries } }));
   const feed = renderToStaticMarkup(createElement(IdeaList, {
     page: { ideas: [{ ...record, entries, _count: { entries: 1 } }], nextCursor: null },

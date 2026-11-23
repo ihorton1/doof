@@ -63,7 +63,7 @@ test("feed links are independently clickable without nesting anchors inside card
     [{
       ...schedule,
       id: ideaId, title: "A linked idea", _count: { entries: 1 },
-      entries: [{ content: "https://example.com/resource", isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
+      entries: [{ content: "https://example.com/resource", linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
     }],
   )));
   const links = DomUtils.findAll((node) => node.name === "a", parseDocument(html).children);
@@ -80,12 +80,12 @@ test("Bolts home shows linked idea cards with entry counts", () => {
       {
         ...schedule,
         id: ideaId, title: "Idea 1", _count: { entries: 1 },
-        entries: [{ content: "The latest discovery.", isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
+        entries: [{ content: "The latest discovery.", linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: new Date("2026-11-18T10:00:00Z"), images: [] }],
       },
       {
         ...schedule,
         id: "cmivnlm9w0001356l5ih14d7z", title: "Idea 2", _count: { entries: 3 },
-        entries: [{ content: "Another recent thought.", isTodo: false, completedAt: null, createdAt: new Date("2026-11-17T09:00:00Z"), images: [] }],
+        entries: [{ content: "Another recent thought.", linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: new Date("2026-11-17T09:00:00Z"), images: [] }],
       },
     ],
   )));
@@ -190,6 +190,7 @@ test("idea detail renders the title, dated entries, line breaks and entry form",
       entries: [{
         id: "entry-1",
         content: "A useful discovery.\nA second thought. https://example.com",
+        linkedIdeaId: null,
         isTodo: false,
         completedAt: null,
         createdAt: new Date("2026-11-18T10:00:00Z"),
@@ -267,7 +268,7 @@ test("idea titles and entry text are rendered as text, not markup", () => {
       pendingDismissal: false,
       archivedAt: null,
       title: "<script>alert(1)</script>",
-      entries: [{ id: "1", content: "<img onerror=alert(1)>", isTodo: false, completedAt: null, createdAt: new Date(), images: [] }],
+      entries: [{ id: "1", content: "<img onerror=alert(1)>", linkedIdeaId: null, isTodo: false, completedAt: null, createdAt: new Date(), images: [] }],
     },
   }));
   assert.match(html, /&lt;script&gt;/);

@@ -77,7 +77,7 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
                     {latestEntry.createdAt.toISOString().slice(0, 10)}
                   </time>
                   {latestEntry.isTodo && <span className="todo-status">{latestEntry.completedAt ? "Completed" : "To-do"}</span>}
-                  {latestEntry.content && <p><EntryText text={latestEntry.content} /></p>}
+                  {(latestEntry.content || latestEntry.linkedIdeaId) && <p><EntryText text={latestEntry.content} linkedIdeaId={latestEntry.linkedIdeaId} /></p>}
                   <EntryImages images={latestEntry.images} compact />
                 </div>
               )}
