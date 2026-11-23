@@ -460,11 +460,16 @@ with **Add to my dishes** fixed below the scrollable content. Pages containing
 several recipes offer a selector. Closing the reader saves nothing.
 
 **Add to my dishes** opens the full New dish form with the selected recipe's
-name, source URL, prepared ingredient fields and method (in Notes). It does not
-fetch the recipe again. Review the suggested ingredient splits before saving;
+name, source URL, image (when available), prepared ingredient fields and method
+(in Notes). The same ingredient word-selection editor used for URL imports opens
+with the original sentences, letting you assign words to Quantity, Unit,
+Ingredient and Notes, remove/undo lines, then apply your changes with **Use recipe**
+(or **Replace ingredients** for an untitled recipe). The carried-over image is
+already selected and can be removed or replaced using the existing image controls.
+It does not fetch the recipe again. Review the suggested ingredient splits before saving;
 ambiguous text is preserved rather than discarded. The draft stays only in that
 browser tab's session storage, survives refresh, and is not saved to the database
-until **Save dish**. Images are intentionally left out of this lightweight reader.
+until **Save dish**. Images stay out of the lightweight reader but carry into the add form.
 Unavailable or blocked browser storage produces an explicit error. An expired
 or invalid draft link offers a return to Dishes or a manual add.
 

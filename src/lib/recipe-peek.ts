@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createIngredientDraft, ingredientDraftError } from "./ingredient-conversion";
+import { normalizeImageUrl } from "./image-url";
 
 const sourceUrlSchema = z.url().max(500).refine(value => {
   if (!URL.canParse(value)) return false;
@@ -10,6 +11,7 @@ const sourceUrlSchema = z.url().max(500).refine(value => {
 export const peekRecipeSchema = z.object({
   name: z.string().max(200),
   ingredients: z.array(z.string().min(1).max(2000)).max(200),
+  imageUrl: z.string().max(4000).refine(value => Boolean(normalizeImageUrl(value)), "Use a public HTTP(S) recipe image URL.").optional(),
   instructions: z.array(z.object({
     text: z.string().min(1).max(19000),
     section: z.string().max(19000).optional(),
@@ -48,9 +50,11 @@ export function recipePeekInitial(draft: RecipePeekDraft) {
     initial: {
       name: draft.recipe.name,
       sourceUrl: draft.sourceUrl,
+      imageUrl: draft.recipe.imageUrl ?? null,
       notes,
       ingredients,
     },
     needsIngredientReview: ingredients.some(ingredient => ingredientDraftError(ingredient) !== null),
+    importRecipe: draft.recipe,
   };
 }

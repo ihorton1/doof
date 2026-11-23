@@ -122,6 +122,54 @@ test("handoff prepares fields and method Notes without dropping ambiguous ingred
   assert.doesNotMatch(html, /Fetching recipe/);
 });
 
+test("peek retains the selected recipe image and opens the standard sentence editor in the add form", () => {
+  const extracted = preview({
+    ...base,
+    image: "/soup.jpg",
+    recipeInstructions: [{ "@type": "HowToStep", text: "Simmer." }],
+  });
+  const response = recipePeekSchema.parse({ ...extracted, sourceUrl: "https://example.com/soup" });
+  const stored = recipePeekDraftSchema.parse(JSON.parse(JSON.stringify({
+    sourceUrl: response.sourceUrl, recipe: response.recipes[0],
+  })));
+  const draft = recipePeekInitial(stored);
+  assert.equal(draft.initial.imageUrl, "https://example.com/soup.jpg");
+  assert.deepEqual(draft.importRecipe.ingredients, base.recipeIngredient);
+  assert.equal(draft.importRecipe.imageUrl, draft.initial.imageUrl);
+  const html = renderToStaticMarkup(createElement(DishForm, {
+    initial: draft.initial, initialRecipe: draft.importRecipe,
+    skipInitialUrlPreview: true, action() {},
+  }));
+  assert.match(html, /name="imageUrl" value="https:\/\/example.com\/soup.jpg"/);
+  assert.match(html, /alt="Recipe image: Quick test soup"/);
+  assert.match(html, /Image selected/);
+  assert.match(html, /alt="Dish preview"/);
+  assert.match(html, /aria-label="Ingredient: 200g carrots"/);
+  assert.match(html, /aria-label="Ingredient: Salt, to taste"/);
+  assert.match(html, /Original sentence: select words/);
+  assert.match(html, /Quantity<\/button>/);
+  assert.match(html, /Notes<\/button>/);
+  assert.match(html, /Use recipe/);
+  assert.match(html, /1\. Simmer\./);
+  assert.doesNotMatch(html, /Fetching recipe/);
+});
+
+test("image-free and incomplete previews still open an editable ingredient review without inventing an image", () => {
+  const draft = recipePeekInitial({
+    sourceUrl: "https://example.com/soup",
+    recipe: { name: "", ingredients: ["For the sauce:", "1 egg"], instructions: [] },
+  });
+  assert.equal(draft.initial.imageUrl, null);
+  const html = renderToStaticMarkup(createElement(DishForm, {
+    initial: draft.initial, initialRecipe: draft.importRecipe,
+    skipInitialUrlPreview: true, action() {},
+  }));
+  assert.match(html, /aria-label="Ingredient: For the sauce:"/);
+  assert.match(html, /aria-label="Ingredient: 1 egg"/);
+  assert.match(html, /Replace ingredients/);
+  assert.doesNotMatch(html, /alt="Dish preview"/);
+});
+
 test("handoff explicitly flags long ingredient fields and rejects oversized Notes", () => {
   const draft = {
     sourceUrl: "https://example.com/soup",
@@ -142,4 +190,7 @@ test("preview and stored draft schemas reject unsafe URLs and malformed contents
     assert.equal(recipePeekDraftSchema.safeParse({ sourceUrl, recipe }).success, false);
   }
   assert.equal(recipePeekDraftSchema.safeParse({ sourceUrl: "https://example.com/", recipe: { ...recipe, instructions: [{ text: 10 }] } }).success, false);
+  for (const imageUrl of ["javascript:alert(1)", "data:image/png,test", "http://127.0.0.1/image.jpg", "https://example.com:8080/image.jpg"]) {
+    assert.equal(recipePeekDraftSchema.safeParse({ sourceUrl: "https://example.com/", recipe: { ...recipe, imageUrl } }).success, false);
+  }
 });

@@ -8,6 +8,7 @@ import { TagPicker } from "./tag-picker";
 import { IngredientImporter } from "./ingredient-importer";
 import { DishRatingOptions } from "@/components/dish-rating-control";
 import type { DishRating } from "@/lib/dish-ratings";
+import type { ImportedRecipe } from "@/lib/recipe-import";
 
 type Ingredient = {
   name: string;
@@ -33,11 +34,13 @@ export function DishForm({
   initial,
   suggestions,
   skipInitialUrlPreview = false,
+  initialRecipe,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initial?: Initial;
   suggestions?: { names: string[]; units: string[]; tags: string[] };
   skipInitialUrlPreview?: boolean;
+  initialRecipe?: ImportedRecipe;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -92,6 +95,7 @@ export function DishForm({
         sourceUrl={sourceUrl}
         autoPreview={autoPreviewUrl}
         currentImageUrl={imageUrl}
+        initialRecipe={urlImportVersion === 0 && sourceUrl === initial?.sourceUrl ? initialRecipe : undefined}
         onUseImage={setImageUrl}
         onReplace={(rows, details) => {
           setIngredients(rows.map(({ name, quantity, unit, notes }) => ({ name, quantity, unit, notes: notes ?? "" })));
