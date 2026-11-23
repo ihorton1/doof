@@ -221,7 +221,6 @@ export function DishForm({
                 maxLength={200}
                 placeholder="Note (optional)"
                 aria-label={`Notes for ingredient ${idx + 1}`}
-                aria-describedby="ingredient-notes-help"
                 className={`${inputCls} min-w-0 col-start-2 row-start-2 sm:col-start-4 sm:row-start-1`}
               />
               <button
@@ -242,9 +241,6 @@ export function DishForm({
         >
           <Plus className="size-4" /> Add ingredient
         </button>
-        <p id="ingredient-notes-help" className="mt-2 text-xs text-slate-500">
-          Ingredient notes (e.g. finely chopped, room temperature) appear on the dish, not on your shopping list.
-        </p>
       </div>
 
       <div className="space-y-2">

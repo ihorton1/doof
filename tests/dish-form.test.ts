@@ -38,14 +38,13 @@ test("each ingredient has a separate optional note field with existing values pr
   }));
   const fields = html.match(/<input\b[^>]*name="ingredient_notes"[^>]*>/g) ?? [];
   assert.equal(fields.length, 2);
-  assert.equal((html.match(/id="ingredient-notes-help"/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /ingredient-notes-help/);
   assert.match(fields[0], /value="room temperature"/);
   assert.match(fields[1], /value=""/);
   for (const [index, field] of fields.entries()) {
     assert.match(field, /maxLength="200"/i);
     assert.ok(field.includes(`aria-label="Notes for ingredient ${index + 1}"`));
-    assert.match(field, /aria-describedby="ingredient-notes-help"/);
     assert.match(field, /col-start-2 row-start-2 sm:col-start-4 sm:row-start-1/);
   }
-  assert.match(html, /appear on the dish, not on your shopping list/);
+  assert.doesNotMatch(html, /Ingredient notes \(e\.g\./);
 });

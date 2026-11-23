@@ -43,7 +43,6 @@ export function NewDishForm({ peekId, suggestions }: {
   return (
     <>
       {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{error} <Link href="/dishes" className="underline">Return to Dishes</Link></p>}
-      {draft && <p className="text-sm text-slate-500 dark:text-slate-400">From your preview. Review the original ingredient sentences below and apply your changes before saving. Any available image is already selected, and the method is in Notes. Nothing has been saved yet.</p>}
       {draft?.needsIngredientReview && <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">Some ingredient fields need shortening before saving. The full extracted text is preserved below for review.</p>}
       <DishForm action={createDish} initial={draft?.initial} initialRecipe={draft?.importRecipe} suggestions={suggestions} skipInitialUrlPreview={Boolean(draft)} />
     </>

@@ -43,7 +43,7 @@ test("import assignment buttons fill four equal columns with mobile-sized tap ta
     assert.match(buttons[index], /disabled=""/);
   }
   assert.doesNotMatch(html, /Clear selection/);
-  assert.match(html, /Tap a selected word again to deselect/);
+  assert.doesNotMatch(html, /Select words, then assign them below|Tap a selected word again to deselect/);
 });
 
 test("ingredient import notes are optional, editable and limited to 200 characters", () => {
@@ -53,5 +53,5 @@ test("ingredient import notes are optional, editable and limited to 200 characte
     onRemove() {},
   }));
   assert.match(html, /Notes \(optional\)<input[^>]*maxLength="200"[^>]*value="softened"/i);
-  assert.match(html, /Ingredient notes appear on the dish, not on your shopping list/);
+  assert.doesNotMatch(html, /Ingredient notes appear on the dish, not on your shopping list/);
 });

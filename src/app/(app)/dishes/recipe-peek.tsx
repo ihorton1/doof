@@ -149,7 +149,7 @@ export function RecipePeekDialog({ onClose }: { onClose: () => void }) {
         </form>
       </div>
       <div aria-busy={busy} className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
-        <p role="status" className="text-sm text-slate-500 dark:text-slate-400">{busy ? "Fetching recipe ingredients and method..." : "Read first. Nothing is saved until you choose Save dish in the add form."}</p>
+        {busy && <p role="status" className="text-sm text-slate-500 dark:text-slate-400">Fetching recipe ingredients and method...</p>}
         {error && <p role="alert" className="text-sm text-rose-600 dark:text-rose-400">{error}</p>}
         {!recipe && originalUrl && <a href={originalUrl} target="_blank" rel="noopener noreferrer" className="inline-block text-sm font-medium text-emerald-700 underline dark:text-emerald-300">Open original</a>}
         {result && recipe && (

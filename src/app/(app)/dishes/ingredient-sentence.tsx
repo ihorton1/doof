@@ -62,9 +62,7 @@ export function IngredientSentence({
             </button>
           ))}
         </div>
-        <p role="status" className="text-xs text-slate-500 break-words">
-          {selection ? `Selected: ${selection}` : "Select words, then assign them below. Tap a selected word again to deselect."}
-        </p>
+        {selection && <p role="status" className="text-xs text-slate-500 break-words">Selected: {selection}</p>}
         <div className="grid grid-cols-4 gap-2">
           {fields.map(({ field, label }) => (
             <button
@@ -94,9 +92,6 @@ export function IngredientSentence({
             </label>
           ))}
         </div>
-        <p className="text-xs text-slate-500">
-          Ingredient notes appear on the dish, not on your shopping list.
-        </p>
         {error && <p className="text-xs text-amber-700 dark:text-amber-400">{error}</p>}
         <button
           type="button"
