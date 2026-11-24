@@ -16,7 +16,7 @@ function isBlocked(root: HTMLElement) {
 }
 
 export function BoltShell({ children }: { children: ReactNode }) {
-  const start = useRef<SwipeStart | null>(null);
+  const start = useRef<(SwipeStart & { dragging: boolean }) | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [offset, setOffset] = useState(0);
   const [phase, setPhase] = useState<"idle" | "dragging" | "settling" | "leaving">("idle");
@@ -27,7 +27,9 @@ export function BoltShell({ children }: { children: ReactNode }) {
   }, []);
 
   function reset() {
+    const dragging = start.current?.dragging;
     start.current = null;
+    if (!dragging) return;
     setOffset(0);
     setPhase("settling");
     if (timer.current) clearTimeout(timer.current);
@@ -38,15 +40,18 @@ export function BoltShell({ children }: { children: ReactNode }) {
     <main className="detail-shell swipe-home" data-swipe-phase={phase}
       style={swipeStyle}
       onTouchStart={(event) => {
-        start.current = null;
         if (phase === "leaving") return;
+        if (event.touches.length !== 1) {
+          reset();
+          return;
+        }
+        if (isBlocked(event.currentTarget)) return;
+        if (event.target instanceof Element && event.target.closest("a, button, input, textarea, select, summary, form, [contenteditable]:not([contenteditable=false])")) return;
         if (timer.current) clearTimeout(timer.current);
         setOffset(0);
         setPhase("idle");
-        if (event.touches.length !== 1 || isBlocked(event.currentTarget)) return;
-        if (event.target instanceof Element && event.target.closest("a, button, input, textarea, select, summary, form, [contenteditable]:not([contenteditable=false])")) return;
         const touch = event.touches[0];
-        start.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+        start.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY, dragging: false };
       }}
       onTouchMove={(event) => {
         const initial = start.current;
@@ -61,6 +66,7 @@ export function BoltShell({ children }: { children: ReactNode }) {
         if (dx < -10 || (dy > 10 && dy > Math.abs(dx))) {
           reset();
         } else if (dx > 10) {
+          initial.dragging = true;
           setPhase("dragging");
           setOffset(Math.min(dx, window.innerWidth));
         }
@@ -68,14 +74,14 @@ export function BoltShell({ children }: { children: ReactNode }) {
       onTouchCancel={reset}
       onTouchEnd={(event) => {
         const initial = start.current;
-        start.current = null;
-        if (phase === "leaving") return;
-        if (!initial || event.touches.length > 0 || isBlocked(event.currentTarget)) {
+        if (!initial || phase === "leaving") return;
+        if (event.touches.length > 0 || isBlocked(event.currentTarget)) {
           reset();
           return;
         }
         const touch = Array.from(event.changedTouches).find((touch) => touch.identifier === initial.id);
         if (touch && isHomeSwipe(initial, { x: touch.clientX, y: touch.clientY })) {
+          start.current = null;
           const home = event.currentTarget.querySelector<HTMLAnchorElement>("a.back-link");
           if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             home?.click();
