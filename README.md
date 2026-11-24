@@ -62,6 +62,8 @@ slides the panel the rest of the way out and returns home, even for slow swipes.
 Short or cancelled swipes slide back. Reduced-motion
 preferences disable the sliding animation.
 The gesture ignores controls, open menus, vertical scrolling and multi-touch.
+Ordinary taps do not start or reset the swipe animation, so links and controls
+retain their normal single-tap behavior.
 It is disabled while editing or while text, images or an optional
 new-bolt title are unsaved. **Due bolts** sits on the left of the rounded panel's
 header, with the logo centered and the three-dot menu on the right, and remains
