@@ -105,12 +105,12 @@ test("Bolts home shows linked idea cards with entry counts", () => {
   assert.doesNotMatch(html, /name="title"/);
 });
 
-test("feed header pairs the lightning wordmark with the user menu, then the heading with new idea", () => {
+test("feed header pairs the lightning wordmark with the user menu and keeps new bolt in bottom navigation", () => {
   const document = parseDocument(renderToStaticMarkup(createElement(IdeaList, feed([]))));
   const header = DomUtils.findOne((node) => node.name === "header", document.children);
   assert.ok(header);
   const children = DomUtils.findAll((node) => node.parent === header, header.children);
-  assert.deepEqual(children.map((node) => node.name), ["p", "details", "h1", "a"]);
+  assert.deepEqual(children.map((node) => node.name), ["p", "details", "h1"]);
   assert.equal(DomUtils.textContent(children[0]), "\u26a1 bolts.");
   assert.equal(children[0].children[0].type, "tag");
   const icon = DomUtils.findOne((node) => node.name === "span", children[0].children);
@@ -123,8 +123,6 @@ test("feed header pairs the lightning wordmark with the user menu, then the head
   assert.equal(DomUtils.textContent(settings!), "Settings");
   assert.ok(DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node) === "Sign out", children[1].children));
   assert.equal(DomUtils.textContent(children[2]), "Your bolts");
-  assert.equal(DomUtils.textContent(children[3]), "+ New idea");
-  assert.equal(children[3].attribs.href, "/ideas/new");
 });
 
 test("feed search is a bottom navigation action after the feed, including when empty", () => {
@@ -144,6 +142,11 @@ test("feed search is a bottom navigation action after the feed, including when e
   assert.equal(DomUtils.textContent(link).trim(), "Search bolts");
   const icon = DomUtils.findOne((node) => node.name === "svg", link.children);
   assert.equal(icon?.attribs["aria-hidden"], "true");
+  const links = DomUtils.findAll((node) => node.name === "a", navigation.children);
+  assert.deepEqual(links.map((item) => item.attribs.href), ["/search", "/ideas/new"]);
+  assert.equal(DomUtils.textContent(links[1]), "\u26a1 New bolt");
+  const boltIcon = DomUtils.findOne((node) => node.name === "span", links[1].children);
+  assert.equal(boltIcon?.attribs["aria-hidden"], "true");
 });
 
 test("feed ideas without entries do not invent preview text or an entry date", () => {
@@ -156,10 +159,24 @@ test("feed ideas without entries do not invent preview text or an entry date", (
   assert.doesNotMatch(html, /idea-card-preview/);
 });
 
-test("New idea starts with a focused entry editor and an optional title in the options menu", () => {
+test("title menu actions show a decorative pencil icon for both adding and editing titles", () => {
+  for (const title of ["", "A bolt"]) {
+    const document = parseDocument(renderToStaticMarkup(createElement(IdeaDetail, {
+      idea: { id: ideaId, title, pendingDismissal: false, archivedAt: null, entries: [] },
+    })));
+    const button = DomUtils.findOne((node) => node.name === "button" && DomUtils.textContent(node).trim() === (title ? "Edit title" : "Add title"), document.children);
+    assert.ok(button);
+    const icon = DomUtils.findOne((node) => node.name === "svg", button.children);
+    assert.equal(icon?.attribs["aria-hidden"], "true");
+    assert.equal(icon?.attribs.width, "20");
+    assert.equal(icon?.attribs.height, "20");
+  }
+});
+
+test("New bolt starts with a focused entry editor and an optional title in the options menu", () => {
   const html = renderToStaticMarkup(createElement(NewIdeaPage));
   assert.match(html, /class="detail-sheet"/);
-  assert.match(html, /<h1 class="visually-hidden">New idea<\/h1>/);
+  assert.match(html, /<h1 class="visually-hidden">New bolt<\/h1>/);
   assert.match(html, /aria-label="Bolt options"/);
   assert.match(html, /Add title/);
   assert.match(html, /name="content"/);

@@ -16,7 +16,7 @@ function EntryBreakout({ ideaId, entry, onClose }: { ideaId: string; entry: Entr
   const id = useId();
   const [state, action, pending] = useActionState(breakOutEntry.bind(null, ideaId, entry.id), {});
   return (
-    <form action={action} className="idea-form entry-edit-form">
+    <form action={action} className="idea-form entry-edit-form" data-swipe-home-blocked="true">
       <label htmlFor={`${id}-title`}>New bolt title (optional)</label>
       <input id={`${id}-title`} name="title" defaultValue={entryBoltTitle(entry.content)} maxLength={200}
         placeholder="Untitled bolt" autoFocus disabled={pending}
@@ -41,7 +41,7 @@ function EntryEditor({ ideaId, entry, onClose }: { ideaId: string; entry: Entry;
   }, {});
 
   return (
-    <form action={action} className="idea-form entry-edit-form">
+    <form action={action} className="idea-form entry-edit-form" data-swipe-home-blocked="true">
       {removedImages.map((imageId) => <input key={imageId} type="hidden" name="removedImages" value={imageId} />)}
       <label htmlFor={`${id}-content`} className="visually-hidden">Edit entry</label>
       <textarea id={`${id}-content`} name="content" value={content}

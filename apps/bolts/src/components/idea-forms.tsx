@@ -2,7 +2,7 @@
 
 import React, { useActionState, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { addEntry, archiveIdea, createIdea, deleteIdea, dismissIdea, reactivateIdea, snoozeIdea } from "../app/actions";
+import { addEntry, archiveIdea, archiveIdeaAndReturn, createIdea, deleteIdea, dismissIdea, reactivateIdea, snoozeIdea } from "../app/actions";
 import { ideaLabel, type IdeaSummary, type SaveState } from "../lib/ideas";
 import { IdeaHeader } from "./idea-header";
 import { snoozeDays } from "../lib/idea-schedule";
@@ -63,7 +63,9 @@ export function NewEntryForm({ ideaId, title = "", pendingDismissal = false, arc
   const busy = pending || dismissPending;
 
   return (
-    <form action={action} className="idea-form entry-form" onPaste={(event) => {
+    <form action={action} className="idea-form entry-form"
+      data-swipe-home-blocked={Boolean(content || images.length > 0 || (!ideaId && title) || busy)}
+      onPaste={(event) => {
       const files = Array.from(event.clipboardData.files);
       if (files.length === 0) return;
       if (!event.clipboardData.getData("text/plain")) event.preventDefault();
@@ -147,16 +149,16 @@ export function SnoozeIdeaForm({ idea, onSnoozed }: { idea: IdeaSummary; onSnooz
   );
 }
 
-export function ArchiveIdeaForm({ idea, onArchived }: { idea: IdeaSummary; onArchived: () => void }) {
+export function ArchiveIdeaForm({ idea, onArchived }: { idea: Pick<IdeaSummary, "id" | "title">; onArchived?: () => void }) {
   const [state, action, pending] = useActionState<SaveState, FormData>(async () => {
-    const result = await archiveIdea(idea.id);
-    if (result.saved) onArchived();
+    const result = await (onArchived ? archiveIdea(idea.id) : archiveIdeaAndReturn(idea.id));
+    if (result.saved) onArchived?.();
     return result;
   }, {});
   return (
-    <form action={action} className="swipe-action-form archive-form">
+    <form action={action} className={onArchived ? "swipe-action-form archive-form" : "bolt-archive-menu-form"}>
       {state.error && <p role="alert" className="form-error">{state.error}</p>}
-      <button className="button button-archive" disabled={pending} aria-label={`Archive ${ideaLabel(idea.title)}`}>
+      <button className={onArchived ? "button button-archive" : "user-menu-item"} disabled={pending} aria-label={`Archive ${ideaLabel(idea.title)}`}>
         <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
           <path d="M4 8v12h16V8M3 3h18v5H3zM9 12h6" />
         </svg>
