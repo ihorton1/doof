@@ -340,6 +340,12 @@ export async function archiveIdea(ideaId: string): Promise<SaveState> {
   return setIdeaArchived(ideaId, true);
 }
 
+export async function archiveIdeaAndReturn(ideaId: string): Promise<SaveState> {
+  const result = await archiveIdea(ideaId);
+  if (result.saved) return redirectAfterAction("/");
+  return result;
+}
+
 export async function reactivateIdea(ideaId: string): Promise<SaveState> {
   await requireSession();
   return setIdeaArchived(ideaId, false);

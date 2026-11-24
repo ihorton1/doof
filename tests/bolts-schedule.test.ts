@@ -12,11 +12,12 @@ import { getIdeaPage, ideaPageArgs, ideaPageRequestSchema, searchQuerySchema, ty
 import { IdeaList } from "../apps/bolts/src/components/idea-list";
 import { IdeaDetail } from "../apps/bolts/src/components/idea-detail";
 import SearchPage from "../apps/bolts/src/app/search/page";
+import IdeasLayout from "../apps/bolts/src/app/ideas/layout";
 import { createSessionCookieValue, SESSION_COOKIE_NAME } from "../apps/bolts/src/lib/auth";
 import { getPrisma } from "../apps/bolts/src/lib/prisma";
 import type { Idea, Prisma } from "../apps/bolts/src/generated/prisma/client";
 import type { IdeaSummary } from "../apps/bolts/src/lib/ideas";
-import { addEntry, archiveIdea, createIdea, dismissIdea, loadIdeaPage, reactivateIdea, snoozeIdea, updateIdeaTitle } from "../apps/bolts/src/app/actions";
+import { addEntry, archiveIdea, archiveIdeaAndReturn, createIdea, dismissIdea, loadIdeaPage, reactivateIdea, snoozeIdea, updateIdeaTitle } from "../apps/bolts/src/app/actions";
 
 const ideaId = "cmivnlm9w0000356l5ih14d7z";
 const dueRequest: IdeaPageRequest = { kind: "due", asOf: "2026-11-19T12:00:00.000Z", cursor: null };
@@ -124,6 +125,24 @@ test("pagination returns exactly ten items and a cursor for the last returned it
   assert.equal(first.nextCursor?.dueAt, record.dueAt.toISOString());
   findMany.mock.mockImplementation(async () => []);
   assert.deepEqual(await getIdeaPage({ ...dueRequest, cursor: first.nextCursor }), { ideas: [], nextCursor: null });
+});
+
+test("bolt layout renders the real due feed behind an inert, screen-reader-hidden preview", async (t) => {
+  const { findMany } = await setup(t);
+  const document = parseDocument(renderToStaticMarkup(await IdeasLayout({
+    children: createElement("main", null, "Current bolt"),
+  })));
+  const preview = DomUtils.findOne((node) => node.attribs.class === "swipe-home-preview", document.children)!;
+  assert.equal(preview.attribs["aria-hidden"], "true");
+  assert.equal(preview.attribs.inert, "");
+  assert.match(DomUtils.textContent(preview), /Your bolts/);
+  assert.match(DomUtils.textContent(preview), /A thought/);
+  assert.doesNotMatch(DomUtils.textContent(preview), /Current bolt/);
+  const filters = findMany.mock.calls[0].arguments[0].where?.AND;
+  assert.ok(Array.isArray(filters));
+  assert.deepEqual(filters[0], { deletedAt: null });
+  assert.equal(filters[1].archivedAt, null);
+  assert.ok(filters[1].dueAt);
 });
 
 test("scheduling and pagination actions authenticate before touching the database", async (t) => {
@@ -335,6 +354,41 @@ test("reactivating makes an archived bolt immediately due with a fresh snooze se
   });
 });
 
+test("archiving from detail returns to the feed only after a successful archive", async (t) => {
+  const { updateMany } = await setup(t);
+  await assert.rejects(() => archiveIdeaAndReturn(ideaId), /NEXT_REDIRECT/);
+  assert.equal(updateMany.mock.callCount(), 1);
+  updateMany.mock.mockImplementation(async () => ({ count: 0 }));
+  assert.ok((await archiveIdeaAndReturn(ideaId)).error);
+});
+
+test("detail archive requires authentication before database access", async (t) => {
+  const { updateMany } = await setup(t, false);
+  await assert.rejects(() => archiveIdeaAndReturn(ideaId), /NEXT_REDIRECT/);
+  assert.equal(updateMany.mock.callCount(), 0);
+});
+
+test("active bolts expose archive in their header options menu, even when untitled", () => {
+  for (const title of ["A thought", ""]) {
+    const document = parseDocument(renderToStaticMarkup(createElement(IdeaDetail, {
+      idea: { ...record, title, entries: [] },
+    })));
+    const article = DomUtils.findOne((node) => node.name === "article", document.children)!;
+    const children = DomUtils.findAll((node) => node.parent === article, article.children);
+    const header = children.find((node) => node.attribs.class === "detail-header")!;
+    const options = DomUtils.findOne((node) => node.name === "details", header.children)!;
+    const archive = DomUtils.findOne((node) => node.name === "form", options.children)!;
+    assert.equal(archive.name, "form");
+    assert.equal(archive.attribs.class, "bolt-archive-menu-form");
+    assert.equal(options.attribs.open, undefined);
+    assert.equal(DomUtils.findAll((node) => node.name === "form" && node.attribs.class === "bolt-archive-menu-form", article.children).length, 1);
+    const button = DomUtils.findOne((node) => node.name === "button", archive.children)!;
+    assert.equal(button.attribs["aria-label"], `Archive ${title || "Untitled bolt"}`);
+    assert.equal(DomUtils.textContent(button).trim(), "Archive");
+    assert.equal(children.at(-1)?.attribs.class, "delete-idea");
+  }
+});
+
 test("archive and reactivation reject invalid, deleted or already changed records", async (t) => {
   const { updateMany, revalidate } = await setup(t);
   assert.ok((await archiveIdea("invalid")).error);
@@ -372,6 +426,7 @@ test("archived details offer reactivation rather than done-for-now", () => {
   assert.match(html, /Reactivate/);
   assert.match(html, /Add entry/);
   assert.doesNotMatch(html, /Done for now/);
+  assert.doesNotMatch(html, /bolt-archive-menu-form/);
 });
 
 test("search page prompts before searching and uses a base-path-aware GET form", async () => {

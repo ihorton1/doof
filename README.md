@@ -44,7 +44,7 @@ next 10 as you scroll; **Load more** also works without automatic scrolling.
 Each card
 previews the latest entry (up to three lines) and the date that entry was added,
 using the same UTC date format as the idea page. Ideas without entries show no
-preview or entry date. **New idea**
+preview or entry date. **New bolt**, marked with a lightning bolt beside **Search bolts** in the bottom navigation,
 opens a dedicated idea widget at `/bolts/ideas/new/`, focused on the entry editor.
 Titles are optional: use the top-right three-dot menu's **Add title** option,
 or **Edit title** on a titled bolt. Clearing a title leaves the bolt untitled.
@@ -55,6 +55,19 @@ Each idea page shows its title, when present, and entries in oldest-first order,
 with a focused **Add to this idea** form. Changing a title leaves entries and
 scheduling unchanged. Entries
 are dated automatically when saved (displayed as ISO calendar dates in UTC).
+Swipe right on an open bolt or blank new-bolt page to return to **Your bolts**.
+Only the rounded bolt panel follows your finger; the page background stays fixed.
+Releasing after at least 80 pixels of mostly horizontal movement automatically
+slides the panel the rest of the way out and returns home, even for slow swipes.
+Short or cancelled swipes slide back. Reduced-motion
+preferences disable the sliding animation.
+The gesture ignores controls, open menus, vertical scrolling and multi-touch.
+It is disabled while editing or while text, images or an optional
+new-bolt title are unsaved. **Due bolts** sits on the left of the rounded panel's
+header, with the logo centered and the three-dot menu on the right, and remains
+available for normal navigation. The home logo is also centered, and the home panel
+has no outline border. Bolt and home panels share the same top position
+so navigating between them does not shift the panel vertically.
 Text and line breaks are preserved; entries are plain text, not HTML.
 Start an entry with `[]` to make the whole entry a to-do, for example
 `[] Read this article`. A **To-do** indicator appears while typing; the prefix is
@@ -78,6 +91,8 @@ Double-tap the text (double-click with a mouse) to open the new bolt; keyboard
 users can focus it and press Enter. It also appears in **Links** and feed
 previews. The original bolt's schedule is unchanged; the new bolt follows the
 usual new-bolt schedule. Bolt links cannot be broken out again.
+The **Archive** option in each active bolt's top-right three-dot menu returns to the due feed
+after archiving. Archived bolts remain searchable and offer **Reactivate** instead.
 Paste images into the entry field to attach them, with or without a text note.
 The trash icon beside each preview removes it before **Add entry**; failed saves retain text and images
 for retrying. Each entry accepts up to four PNG, JPEG, GIF or WebP images with a
@@ -111,9 +126,9 @@ not the old due date, and respect daylight saving time. New ideas first surface
 the next day; existing ideas are immediately eligible after migration.
 The feed uses a fixed due-time cutoff while scrolling; refresh to see newly due
 bolts. There are no catch-up appearances after time away.
-The floating **Search bolts** button stays at the bottom of the viewport over the
-feed, above the device's safe area, with space to scroll the last card clear.
-It opens `/bolts/search/`, with case-insensitive literal matching
+The floating **Search bolts** and **New bolt** buttons stay side by side at the
+bottom of the viewport over the feed, above the device's safe area, with space to
+scroll the last card clear. **Search bolts** opens `/bolts/search/`, with case-insensitive literal matching
 against titles and all entries, including older entries and snoozed or archived bolts.
 Search results are also paged in batches of 10; deleted bolts are excluded.
 **Archive** stops automatic resurfacing without deleting the bolt or its entries.

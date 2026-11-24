@@ -9,7 +9,7 @@ import { SwipeIdeaCard } from "./swipe-idea-card";
 import { EntryImages } from "./entry-images";
 import { ideaLabel } from "../lib/ideas";
 
-export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; request: IdeaPageRequest }) {
+export function IdeaCards({ initialPage, request, preview = false }: { initialPage: IdeaPage; request: IdeaPageRequest; preview?: boolean }) {
   const [page, setPage] = useState(initialPage);
   const [snapshot] = useState(request);
   const [loading, setLoading] = useState(false);
@@ -47,13 +47,13 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || !page.nextCursor || error || !("IntersectionObserver" in window)) return;
+    if (preview || !sentinel || !page.nextCursor || error || !("IntersectionObserver" in window)) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) void loadMore();
     }, { rootMargin: "200px" });
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [page.nextCursor, error, loadMore]);
+  }, [preview, page.nextCursor, error, loadMore]);
 
   return (
     <>
@@ -61,7 +61,7 @@ export function IdeaCards({ initialPage, request }: { initialPage: IdeaPage; req
         <div className="empty-state">
           <h2>{request.kind === "due" ? "Nothing due right now." : "No matching bolts."}</h2>
           <p>{request.kind === "due"
-            ? "Add a new idea, search your bolts, or come back when another thought is ready to revisit."
+            ? "Add a new bolt, search your bolts, or come back when another thought is ready to revisit."
             : "Try another title or a phrase from an entry. Snoozed and archived bolts are included."}</p>
         </div>
       )}
